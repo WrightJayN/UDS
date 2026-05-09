@@ -1,0 +1,20 @@
+{
+  "name": "utech-directions-sys",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WrightJayN/Utech-directions-sys.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/WrightJayN/Utech-directions-sys/issues"
+  },
+  "homepage": "https://github.com/WrightJayN/Utech-directions-sys#readme"
+}

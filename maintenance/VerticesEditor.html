@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Vertices Editor — campusMapRenderer.js</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg:        #0d0f14;
+    --surface:   #14171f;
+    --panel:     #1a1e29;
+    --border:    #252b3b;
+    --accent:    #00e5ff;
+    --accent2:   #ff3f6c;
+    --gold:      #ffd700;
+    --text:      #e4e8f0;
+    --muted:     #5a6380;
+    --green:     #39ff8f;
+    --radius:    6px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: grid;
+    grid-template-rows: 52px 1fr;
+    grid-template-columns: 320px 1fr;
+    overflow: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 0 20px;
+  }
+  header .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: .04em;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  header .logo span { color: var(--accent2); }
+  .header-sep { flex: 1; }
+  .badge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .badge-js { background: #ffd70022; color: var(--gold); border: 1px solid #ffd70044; }
+  .badge-mode { background: #00e5ff18; color: var(--accent); border: 1px solid #00e5ff33; }
+
+  #mode-label { font-size: 11px; color: var(--muted); }
+
+  /* ── SIDEBAR ── */
+  #sidebar {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-section {
+    padding: 14px 14px 0;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .sidebar-section:last-child { border-bottom: none; flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+  .section-label {
+    font-size: 9px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+
+  /* file load */
+  #drop-zone {
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 14px 10px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background .2s;
+    margin-bottom: 12px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  #drop-zone:hover, #drop-zone.drag { border-color: var(--accent); background: #00e5ff08; color: var(--accent); }
+  #drop-zone input { display: none; }
+  #drop-zone .drop-icon { font-size: 22px; margin-bottom: 4px; }
+
+  /* building list */
+  #building-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 4px 0 12px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .bld-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: background .15s;
+    border-left: 2px solid transparent;
+  }
+  .bld-item:hover { background: #ffffff08; }
+  .bld-item.active { background: #00e5ff10; border-left-color: var(--accent); color: var(--accent); }
+  .bld-item .vtx-count {
+    margin-left: auto;
+    font-size: 9px;
+    color: var(--muted);
+    background: var(--border);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  .bld-item .bld-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .bld-item.active .bld-dot { background: var(--accent); }
+
+  /* controls */
+  .ctrl-row {
+    display: flex;
+    gap: 6px;
+    padding: 10px 14px;
+    flex-shrink: 0;
+    border-top: 1px solid var(--border);
+  }
+  button {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 7px 10px;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); background: #00e5ff10; }
+  button.danger:hover { border-color: var(--accent2); color: var(--accent2); background: #ff3f6c10; }
+  button.primary { background: var(--accent); color: #000; border-color: var(--accent); }
+  button.primary:hover { background: #00bcd4; border-color: #00bcd4; color: #000; }
+  button.success { background: var(--green); color: #000; border-color: var(--green); }
+  button.success:hover { background: #00e07a; border-color: #00e07a; color: #000; }
+
+  input[type=text], input[type=number] {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: var(--radius);
+    padding: 6px 8px;
+    outline: none;
+    transition: border-color .15s;
+    width: 100%;
+  }
+  input:focus { border-color: var(--accent); }
+
+  /* add building form */
+  .add-bld-form {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  /* vertex table */
+  #vtx-panel {
+    padding: 10px 14px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    max-height: 240px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  #vtx-panel table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+  }
+  #vtx-panel th {
+    color: var(--muted);
+    font-size: 9px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    padding: 4px 4px;
+    text-align: left;
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+  }
+  #vtx-panel td {
+    padding: 3px 4px;
+    border-bottom: 1px solid #ffffff07;
+  }
+  #vtx-panel tr.active-row td { background: #00e5ff0c; color: var(--accent); }
+  #vtx-panel tr:hover td { background: #ffffff06; cursor: pointer; }
+  #vtx-panel td input {
+    width: 56px;
+    padding: 2px 4px;
+    font-size: 10px;
+  }
+  .del-vtx { cursor: pointer; color: var(--accent2); font-size: 12px; padding: 0 4px; }
+
+  /* ── CANVAS AREA ── */
+  #canvas-wrap {
+    position: relative;
+    overflow: hidden;
+    background: #080a0f;
+    cursor: crosshair;
+  }
+  #canvas-wrap canvas {
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: 0 0;
+    image-rendering: pixelated;
+  }
+  #map-canvas { z-index: 0; }
+  #overlay-canvas { z-index: 1; }
+
+  /* toolbar overlay */
+  #toolbar {
+    position: absolute;
+    top: 12px; left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #0d0f14cc;
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    z-index: 10;
+    font-size: 10px;
+  }
+  #toolbar .tool-sep { width: 1px; height: 20px; background: var(--border); }
+  .tool-btn {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--muted);
+    font-size: 10px;
+    border-radius: 4px;
+    padding: 4px 10px;
+  }
+  .tool-btn:hover { color: var(--text); border-color: var(--border); }
+  .tool-btn.active { border-color: var(--accent); color: var(--accent); background: #00e5ff12; }
+
+  /* zoom badge */
+  #zoom-badge {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    background: #0d0f14cc;
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 10px;
+    color: var(--muted);
+    z-index: 10;
+  }
+
+  /* cursor info */
+  #cursor-info {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    background: #0d0f14cc;
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-size: 10px;
+    color: var(--muted);
+    z-index: 10;
+    pointer-events: none;
+  }
+
+  /* toast */
+  #toast {
+    position: absolute;
+    top: 60px; left: 50%;
+    transform: translateX(-50%) translateY(-6px);
+    background: var(--green);
+    color: #000;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 4px;
+    z-index: 20;
+    opacity: 0;
+    transition: opacity .2s, transform .2s;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* no-map placeholder */
+  #no-map {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--muted);
+    font-size: 12px;
+    pointer-events: none;
+    z-index: 5;
+  }
+  #no-map .nm-icon { font-size: 48px; opacity: .3; }
+  #no-map.hidden { display: none; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">Vertices<span>Editor</span></div>
+  <span class="badge badge-js">campusMapRenderer.js</span>
+  <span class="badge badge-mode" id="mode-badge">VIEW</span>
+  <span id="mode-label">Load a campusMapRenderer.js to begin</span>
+  <div class="header-sep"></div>
+  <button class="success" id="btn-download" disabled>⬇ Download campusMapRenderer.js</button>
+</header>
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+
+  <!-- Load file -->
+  <div class="sidebar-section" style="padding-bottom:14px">
+    <div class="section-label">Load Database</div>
+    <div id="drop-zone">
+      <div class="drop-icon">📂</div>
+      <div>Drop <strong>campusMapRenderer.js</strong> here<br>or click to browse</div>
+      <input type="file" id="file-input" accept=".js">
+    </div>
+    <!-- map image -->
+    <div style="display:flex;gap:6px;margin-bottom:2px">
+      <input type="text" id="map-path" placeholder="Map image path (optional)" style="flex:1;font-size:10px"/>
+      <button id="btn-load-map" style="flex-shrink:0">Load</button>
+    </div>
+  </div>
+
+  <!-- Building list -->
+  <div class="sidebar-section">
+    <div class="section-label" style="display:flex;justify-content:space-between">
+      <span>Buildings</span>
+      <span id="bld-count" style="color:var(--muted)">0</span>
+    </div>
+    <div id="building-list"></div>
+
+    <!-- Add building -->
+    <div class="add-bld-form">
+      <input type="text" id="new-bld-name" placeholder="New building name…" />
+      <button id="btn-add-bld">+ Add</button>
+    </div>
+
+    <!-- Actions -->
+    <div class="ctrl-row">
+      <button id="btn-rename">Rename</button>
+      <button id="btn-delete-bld" class="danger">Delete</button>
+      <button id="btn-clear-vtx" class="danger">Clear vtx</button>
+    </div>
+  </div>
+
+  <!-- Vertex table -->
+  <div id="vtx-panel">
+    <div class="section-label">Vertices — <span id="vtx-panel-name">none</span></div>
+    <table>
+      <thead><tr><th>#</th><th>X</th><th>Y</th><th></th></tr></thead>
+      <tbody id="vtx-tbody"></tbody>
+    </table>
+  </div>
+
+</aside>
+
+<!-- CANVAS AREA -->
+<div id="canvas-wrap">
+  <div id="no-map">
+    <div class="nm-icon">🗺</div>
+    <div>Load a map image to see the canvas</div>
+    <div style="font-size:10px;margin-top:4px">You can still edit vertices without an image</div>
+  </div>
+
+  <canvas id="map-canvas"></canvas>
+  <canvas id="overlay-canvas"></canvas>
+
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <button class="tool-btn active" id="tool-add" title="Click canvas to add vertex">✚ Add Vertex</button>
+    <button class="tool-btn" id="tool-move" title="Drag a vertex to move it">⬡ Move Vertex</button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" id="tool-pan" title="Pan the map">✥ Pan</button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" id="btn-zoom-in">＋</button>
+    <button class="tool-btn" id="btn-zoom-out">－</button>
+    <button class="tool-btn" id="btn-zoom-fit">Fit</button>
+    <button class="tool-btn" id="btn-zoom-100">100%</button>
+  </div>
+
+  <div id="zoom-badge">zoom: 100%</div>
+  <div id="cursor-info">x: 0 y: 0</div>
+  <div id="toast">Saved!</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════
+const state = {
+  buildings: new Map(),      // name → [{x,y}, …]
+  selected: null,            // selected building name
+  tool: 'add',               // 'add' | 'move' | 'pan'
+  zoom: 1,
+  panX: 0,
+  panY: 0,
+  dragging: false,
+  dragVtx: -1,
+  panStart: null,
+  mapLoaded: false,
+  hoverVtx: -1,
+};
+
+// ═══════════════════════════════════════════════════════
+//  DOM REFS
+// ═══════════════════════════════════════════════════════
+const wrap         = document.getElementById('canvas-wrap');
+const mapCanvas    = document.getElementById('map-canvas');
+const overlayCanvas= document.getElementById('overlay-canvas');
+const mapCtx       = mapCanvas.getContext('2d');
+const ovCtx        = overlayCanvas.getContext('2d');
+const bldList      = document.getElementById('building-list');
+const bldCount     = document.getElementById('bld-count');
+const vtxTbody     = document.getElementById('vtx-tbody');
+const vtxPanelName = document.getElementById('vtx-panel-name');
+const newBldName   = document.getElementById('new-bld-name');
+const mapPathInput = document.getElementById('map-path');
+const modeBadge    = document.getElementById('mode-badge');
+const modeLabel    = document.getElementById('mode-label');
+const zoomBadge    = document.getElementById('zoom-badge');
+const cursorInfo   = document.getElementById('cursor-info');
+const noMap        = document.getElementById('no-map');
+const toast        = document.getElementById('toast');
+
+// ═══════════════════════════════════════════════════════
+//  PARSE campusMapRenderer.js
+// ═══════════════════════════════════════════════════════
+function parseCampusMapRendererJs(src) {
+  const map = new Map();
+  // Match each entry: 'name', [ ... ]
+  const entryRe = /\[(['"`])([\s\S]*?)\1\s*,\s*\[([\s\S]*?)\]\]/g;
+  let m;
+  while ((m = entryRe.exec(src)) !== null) {
+    const name = m[2];
+    const body = m[3];
+    const vertices = [];
+    const vtxRe = /\{\s*x\s*:\s*(-?\d+(?:\.\d+)?)\s*,\s*y\s*:\s*(-?\d+(?:\.\d+)?)\s*\}/g;
+    let v;
+    while ((v = vtxRe.exec(body)) !== null) {
+      vertices.push({ x: parseFloat(v[1]), y: parseFloat(v[2]) });
+    }
+    map.set(name, vertices);
+  }
+  return map;
+}
+
+// ═══════════════════════════════════════════════════════
+//  EXPORT campusMapRenderer.js
+// ═══════════════════════════════════════════════════════
+function exportCampusMapRendererJs() {
+  let entries = '';
+  for (const [name, verts] of state.buildings) {
+    const rows = verts.map(v => `            {x: ${v.x}, y: ${v.y}}`).join(',\n');
+    entries += `        ['${name}', [\n${rows}\n        ]],\n`;
+  }
+
+  // Preserve the full class structure from the original file
+  return `class CampusMapRenderer {
+
+    static buildingVerticesHashMap = new Map([
+${entries}    ]);
+
+    static loadMapImage(imagePath, canvas) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const context = canvas.getContext('2d');
+                context.drawImage(img, 0, 0);
+                resolve(img);
+            };
+            img.onerror = () => reject(new Error('Image not found'));
+            img.src = imagePath;
+        });
+    }
+
+    static getBuildingVertices(buildingNode) {
+        const buildingName = buildingNode.name;
+        return this.buildingVerticesHashMap.get(buildingName);
+    }
+
+    static colorBuilding(vertices, color, context) {
+        if (!vertices || !Array.isArray(vertices) || vertices.length === 0 || !color || !context) return false;
+        context.fillStyle = color;
+        context.beginPath();
+        context.moveTo(vertices[0].x, vertices[0].y);
+        for (let i = 1; i < vertices.length; i++) context.lineTo(vertices[i].x, vertices[i].y);
+        context.closePath();
+        context.fill();
+        return true;
+    }
+
+    static drawPathLine(path, context) {
+        if (!path || !Array.isArray(path) || path.length < 2 || !context) return false;
+        context.strokeStyle = '#FFD700';
+        context.lineWidth = 5;
+        context.beginPath();
+        context.moveTo(path[0].x_coor, path[0].y_coor);
+        for (let i = 1; i < path.length; i++) context.lineTo(path[i].x_coor, path[i].y_coor);
+        context.stroke();
+        return true;
+    }
+
+    static drawMapKey(context, canvasWidth, canvasHeight, scale = 2.5) {
+        const baseKeyWidth = 200, baseKeyHeight = 90, basePadding = 10;
+        const baseSymbolSize = 20, baseLineLength = 50, baseFontSize = 12, baseSpacing = 30;
+        const keyWidth = baseKeyWidth * scale, keyHeight = baseKeyHeight * scale;
+        const padding = basePadding * scale, symbolSize = baseSymbolSize * scale;
+        const lineLength = baseLineLength * scale, fontSize = baseFontSize * scale, spacing = baseSpacing * scale;
+        const marginX = 20 * scale, marginY = 20 * scale;
+        const keyX = canvasWidth - keyWidth - marginX, keyY = canvasHeight - keyHeight - marginY;
+        context.fillStyle = '#FFFFFF';
+        context.fillRect(keyX - padding, keyY - padding, keyWidth + 2*padding, keyHeight + 2*padding);
+        context.strokeStyle = '#CCCCCC'; context.lineWidth = 2 * scale;
+        context.strokeRect(keyX - padding, keyY - padding, keyWidth + 2*padding, keyHeight + 2*padding);
+        context.font = \`\${fontSize}px Arial\`; context.fillStyle = '#000000'; context.textBaseline = 'middle';
+        const textOffsetX = symbolSize + 8 * scale, startY = keyY + padding + symbolSize / 2;
+        context.fillStyle = '#FF0000'; context.fillRect(keyX+padding, keyY+padding, symbolSize, symbolSize);
+        context.fillStyle = '#000000'; context.fillText("Source Building", keyX+padding+textOffsetX, startY);
+        context.fillStyle = '#0000FF'; context.fillRect(keyX+padding, keyY+padding+spacing, symbolSize, symbolSize);
+        context.fillStyle = '#000000'; context.fillText("Destination Building", keyX+padding+textOffsetX, startY+spacing);
+        const lineY = keyY + padding + 2 * spacing;
+        context.strokeStyle = '#FFD700'; context.lineWidth = 5 * scale;
+        context.beginPath(); context.moveTo(keyX+padding, lineY+symbolSize/2); context.lineTo(keyX+padding+lineLength, lineY+symbolSize/2); context.stroke();
+        context.fillStyle = '#000000'; context.fillText("Path", keyX+padding+lineLength+8*scale, lineY+symbolSize/2);
+    }
+
+    static createMapWithPath(sourceBuilding, destinationBuilding, path, canvas) {
+        const context = canvas.getContext('2d');
+        this.drawPathLine(path, context);
+        const sourceVertices = this.getBuildingVertices(sourceBuilding);
+        if (sourceVertices) this.colorBuilding(sourceVertices, '#FF0000', context);
+        const destinationVertices = this.getBuildingVertices(destinationBuilding);
+        if (destinationVertices) this.colorBuilding(destinationVertices, '#0000FF', context);
+        this.drawMapKey(context, canvas.width, canvas.height);
+        return canvas;
+    }
+}
+
+export { CampusMapRenderer };
+`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER — building list
+// ═══════════════════════════════════════════════════════
+function renderBuildingList() {
+  bldList.innerHTML = '';
+  bldCount.textContent = state.buildings.size;
+  for (const [name] of state.buildings) {
+    const verts = state.buildings.get(name);
+    const item = document.createElement('div');
+    item.className = 'bld-item' + (state.selected === name ? ' active' : '');
+    item.innerHTML = `<div class="bld-dot"></div><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</span><span class="vtx-count">${verts.length} vtx</span>`;
+    item.addEventListener('click', () => selectBuilding(name));
+    bldList.appendChild(item);
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  RENDER — vertex table
+// ═══════════════════════════════════════════════════════
+function renderVtxTable() {
+  vtxTbody.innerHTML = '';
+  if (!state.selected) { vtxPanelName.textContent = 'none'; return; }
+  vtxPanelName.textContent = state.selected;
+  const verts = state.buildings.get(state.selected) || [];
+  verts.forEach((v, i) => {
+    const tr = document.createElement('tr');
+    if (i === state.hoverVtx) tr.className = 'active-row';
+    tr.innerHTML = `
+      <td style="color:var(--muted)">${i}</td>
+      <td><input type="number" value="${v.x}" data-i="${i}" data-k="x" /></td>
+      <td><input type="number" value="${v.y}" data-i="${i}" data-k="y" /></td>
+      <td><span class="del-vtx" data-i="${i}" title="Delete">✕</span></td>
+    `;
+    vtxTbody.appendChild(tr);
+  });
+
+  // events
+  vtxTbody.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('change', e => {
+      const idx = +e.target.dataset.i;
+      const key = e.target.dataset.k;
+      state.buildings.get(state.selected)[idx][key] = parseFloat(e.target.value) || 0;
+      drawOverlay();
+    });
+  });
+  vtxTbody.querySelectorAll('.del-vtx').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = +e.target.dataset.i;
+      state.buildings.get(state.selected).splice(idx, 1);
+      renderVtxTable();
+      drawOverlay();
+      renderBuildingList();
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+//  SELECT BUILDING
+// ═══════════════════════════════════════════════════════
+function selectBuilding(name) {
+  state.selected = name;
+  state.hoverVtx = -1;
+  renderBuildingList();
+  renderVtxTable();
+  drawOverlay();
+  modeLabel.textContent = `Editing: ${name}`;
+  modeBadge.textContent = 'EDIT';
+}
+
+// ═══════════════════════════════════════════════════════
+//  CANVAS SIZING
+// ═══════════════════════════════════════════════════════
+function resizeOverlay() {
+  const r = wrap.getBoundingClientRect();
+  overlayCanvas.width  = r.width;
+  overlayCanvas.height = r.height;
+}
+
+// ═══════════════════════════════════════════════════════
+//  COORDINATE TRANSFORMS
+// ═══════════════════════════════════════════════════════
+function toCanvas(wx, wy) {
+  return { x: wx * state.zoom + state.panX, y: wy * state.zoom + state.panY };
+}
+function toWorld(cx, cy) {
+  return { x: (cx - state.panX) / state.zoom, y: (cy - state.panY) / state.zoom };
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRAW OVERLAY
+// ═══════════════════════════════════════════════════════
+function drawOverlay() {
+  const W = overlayCanvas.width, H = overlayCanvas.height;
+  ovCtx.clearRect(0, 0, W, H);
+
+  // Draw all buildings faintly
+  for (const [name, verts] of state.buildings) {
+    if (!verts.length) continue;
+    const isSelected = name === state.selected;
+    ovCtx.beginPath();
+    const p0 = toCanvas(verts[0].x, verts[0].y);
+    ovCtx.moveTo(p0.x, p0.y);
+    for (let i = 1; i < verts.length; i++) {
+      const p = toCanvas(verts[i].x, verts[i].y);
+      ovCtx.lineTo(p.x, p.y);
+    }
+    ovCtx.closePath();
+    ovCtx.fillStyle = isSelected ? 'rgba(0,229,255,0.12)' : 'rgba(255,255,255,0.04)';
+    ovCtx.fill();
+    ovCtx.strokeStyle = isSelected ? 'rgba(0,229,255,0.8)' : 'rgba(255,255,255,0.2)';
+    ovCtx.lineWidth = isSelected ? 1.5 : 0.8;
+    ovCtx.stroke();
+  }
+
+  // Draw vertices for selected
+  if (!state.selected) return;
+  const verts = state.buildings.get(state.selected) || [];
+  verts.forEach((v, i) => {
+    const p = toCanvas(v.x, v.y);
+    const isHover = i === state.hoverVtx;
+    // vertex circle
+    ovCtx.beginPath();
+    ovCtx.arc(p.x, p.y, isHover ? 7 : 4.5, 0, Math.PI * 2);
+    ovCtx.fillStyle = isHover ? '#00e5ff' : '#ffffff';
+    ovCtx.fill();
+    ovCtx.strokeStyle = '#00e5ff';
+    ovCtx.lineWidth = 1.5;
+    ovCtx.stroke();
+    // index label
+    if (state.zoom > 0.3) {
+      ovCtx.font = `bold ${Math.min(11, 9 * state.zoom + 4)}px JetBrains Mono, monospace`;
+      ovCtx.fillStyle = isHover ? '#00e5ff' : 'rgba(255,255,255,0.7)';
+      ovCtx.fillText(i, p.x + 8, p.y - 6);
+    }
+  });
+
+  // First vertex special marker
+  if (verts.length) {
+    const p = toCanvas(verts[0].x, verts[0].y);
+    ovCtx.beginPath();
+    ovCtx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+    ovCtx.strokeStyle = '#ffd700';
+    ovCtx.lineWidth = 2;
+    ovCtx.stroke();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  MAP IMAGE
+// ═══════════════════════════════════════════════════════
+let mapImg = null;
+
+function loadMapImage(src) {
+  const img = new Image();
+  img.onload = () => {
+    mapCanvas.width  = img.width;
+    mapCanvas.height = img.height;
+    mapCtx.drawImage(img, 0, 0);
+    mapImg = img;
+    state.mapLoaded = true;
+    noMap.classList.add('hidden');
+    fitToView();
+  };
+  img.onerror = () => showToast('⚠ Could not load image', '#ff3f6c');
+  img.src = src;
+}
+
+function fitToView() {
+  if (!mapImg) return;
+  const r = wrap.getBoundingClientRect();
+  const scaleX = r.width  / mapImg.width;
+  const scaleY = r.height / mapImg.height;
+  state.zoom = Math.min(scaleX, scaleY) * 0.95;
+  state.panX = (r.width  - mapImg.width  * state.zoom) / 2;
+  state.panY = (r.height - mapImg.height * state.zoom) / 2;
+  applyTransform();
+  drawOverlay();
+}
+
+function applyTransform() {
+  mapCanvas.style.transform = `translate(${state.panX}px,${state.panY}px) scale(${state.zoom})`;
+  zoomBadge.textContent = `zoom: ${Math.round(state.zoom * 100)}%`;
+}
+
+// ═══════════════════════════════════════════════════════
+//  ZOOM
+// ═══════════════════════════════════════════════════════
+function zoomAt(cx, cy, factor) {
+  state.panX = cx - (cx - state.panX) * factor;
+  state.panY = cy - (cy - state.panY) * factor;
+  state.zoom *= factor;
+  applyTransform();
+  drawOverlay();
+}
+
+wrap.addEventListener('wheel', e => {
+  e.preventDefault();
+  const r = wrap.getBoundingClientRect();
+  const cx = e.clientX - r.left;
+  const cy = e.clientY - r.top;
+  zoomAt(cx, cy, e.deltaY < 0 ? 1.1 : 1 / 1.1);
+}, { passive: false });
+
+document.getElementById('btn-zoom-in') .addEventListener('click', () => zoomAt(wrap.getBoundingClientRect().width/2, wrap.getBoundingClientRect().height/2, 1.2));
+document.getElementById('btn-zoom-out').addEventListener('click', () => zoomAt(wrap.getBoundingClientRect().width/2, wrap.getBoundingClientRect().height/2, 1/1.2));
+document.getElementById('btn-zoom-fit').addEventListener('click', fitToView);
+document.getElementById('btn-zoom-100').addEventListener('click', () => {
+  const r = wrap.getBoundingClientRect();
+  state.zoom = 1; state.panX = r.width/2 - (mapImg ? mapImg.width/2 : 0); state.panY = r.height/2 - (mapImg ? mapImg.height/2 : 0);
+  applyTransform(); drawOverlay();
+});
+
+// ═══════════════════════════════════════════════════════
+//  CANVAS POINTER EVENTS
+// ═══════════════════════════════════════════════════════
+function getCanvasXY(e) {
+  const r = wrap.getBoundingClientRect();
+  return { cx: e.clientX - r.left, cy: e.clientY - r.top };
+}
+
+function findHoverVtx(cx, cy) {
+  if (!state.selected) return -1;
+  const verts = state.buildings.get(state.selected) || [];
+  const threshold = Math.max(8, 12 / state.zoom);
+  for (let i = 0; i < verts.length; i++) {
+    const p = toCanvas(verts[i].x, verts[i].y);
+    const dx = cx - p.x, dy = cy - p.y;
+    if (Math.sqrt(dx*dx + dy*dy) < threshold) return i;
+  }
+  return -1;
+}
+
+overlayCanvas.addEventListener('mousemove', e => {
+  const { cx, cy } = getCanvasXY(e);
+  const { x, y } = toWorld(cx, cy);
+  cursorInfo.textContent = `x: ${Math.round(x)}  y: ${Math.round(y)}`;
+
+  if (state.tool === 'move' && state.dragging && state.dragVtx >= 0) {
+    const v = state.buildings.get(state.selected)[state.dragVtx];
+    v.x = Math.round(x); v.y = Math.round(y);
+    renderVtxTable();
+    drawOverlay();
+    return;
+  }
+  if (state.tool === 'pan' && state.dragging && state.panStart) {
+    state.panX += cx - state.panStart.cx;
+    state.panY += cy - state.panStart.cy;
+    state.panStart = { cx, cy };
+    applyTransform(); drawOverlay(); return;
+  }
+
+  const prev = state.hoverVtx;
+  state.hoverVtx = (state.tool === 'move') ? findHoverVtx(cx, cy) : -1;
+  overlayCanvas.style.cursor =
+    state.tool === 'pan'  ? (state.dragging ? 'grabbing' : 'grab') :
+    state.tool === 'move' ? (state.hoverVtx >= 0 ? 'grab' : 'default') : 'crosshair';
+
+  if (prev !== state.hoverVtx) { renderVtxTable(); drawOverlay(); }
+});
+
+overlayCanvas.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  const { cx, cy } = getCanvasXY(e);
+
+  if (state.tool === 'pan') {
+    state.dragging = true;
+    state.panStart = { cx, cy };
+    overlayCanvas.style.cursor = 'grabbing';
+    return;
+  }
+  if (state.tool === 'move') {
+    const idx = findHoverVtx(cx, cy);
+    if (idx >= 0) { state.dragging = true; state.dragVtx = idx; }
+    return;
+  }
+  // add mode
+  if (!state.selected) { showToast('Select a building first', '#ff3f6c'); return; }
+  const { x, y } = toWorld(cx, cy);
+  state.buildings.get(state.selected).push({ x: Math.round(x), y: Math.round(y) });
+  renderVtxTable();
+  renderBuildingList();
+  drawOverlay();
+});
+
+overlayCanvas.addEventListener('mouseup', () => {
+  state.dragging = false; state.dragVtx = -1; state.panStart = null;
+  overlayCanvas.style.cursor = state.tool === 'pan' ? 'grab' : state.tool === 'move' ? 'default' : 'crosshair';
+});
+
+overlayCanvas.addEventListener('mouseleave', () => {
+  state.hoverVtx = -1; renderVtxTable(); drawOverlay();
+});
+
+// right-click to remove last vertex
+overlayCanvas.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  if (!state.selected) return;
+  const verts = state.buildings.get(state.selected);
+  if (verts.length) { verts.pop(); renderVtxTable(); renderBuildingList(); drawOverlay(); }
+});
+
+// ═══════════════════════════════════════════════════════
+//  TOOL BUTTONS
+// ═══════════════════════════════════════════════════════
+['tool-add','tool-move','tool-pan'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function() {
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    state.tool = id.replace('tool-','');
+    overlayCanvas.style.cursor = state.tool === 'pan' ? 'grab' : state.tool === 'move' ? 'default' : 'crosshair';
+    state.hoverVtx = -1; drawOverlay();
+  });
+});
+
+// ═══════════════════════════════════════════════════════
+//  SIDEBAR ACTIONS
+// ═══════════════════════════════════════════════════════
+document.getElementById('btn-add-bld').addEventListener('click', () => {
+  const name = newBldName.value.trim();
+  if (!name) return;
+  if (state.buildings.has(name)) { showToast('Name already exists', '#ff3f6c'); return; }
+  state.buildings.set(name, []);
+  newBldName.value = '';
+  renderBuildingList();
+  selectBuilding(name);
+});
+newBldName.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-add-bld').click(); });
+
+document.getElementById('btn-rename').addEventListener('click', () => {
+  if (!state.selected) return;
+  const n = prompt('New name:', state.selected);
+  if (!n || n === state.selected) return;
+  if (state.buildings.has(n)) { showToast('Name exists', '#ff3f6c'); return; }
+  const verts = state.buildings.get(state.selected);
+  const entries = [...state.buildings.entries()];
+  const idx = entries.findIndex(([k]) => k === state.selected);
+  const newMap = new Map(entries.map(([k, v]) => k === state.selected ? [n, v] : [k, v]));
+  state.buildings = newMap;
+  state.selected = n;
+  renderBuildingList(); renderVtxTable(); drawOverlay();
+});
+
+document.getElementById('btn-delete-bld').addEventListener('click', () => {
+  if (!state.selected) return;
+  if (!confirm(`Delete "${state.selected}" and all its vertices?`)) return;
+  state.buildings.delete(state.selected);
+  state.selected = null;
+  renderBuildingList(); renderVtxTable(); drawOverlay();
+  modeLabel.textContent = 'Select a building'; modeBadge.textContent = 'VIEW';
+});
+
+document.getElementById('btn-clear-vtx').addEventListener('click', () => {
+  if (!state.selected) return;
+  if (!confirm(`Clear all vertices for "${state.selected}"?`)) return;
+  state.buildings.set(state.selected, []);
+  renderVtxTable(); renderBuildingList(); drawOverlay();
+});
+
+// ═══════════════════════════════════════════════════════
+//  FILE LOAD
+// ═══════════════════════════════════════════════════════
+function loadJs(text) {
+  const parsed = parseCampusMapRendererJs(text);
+  if (parsed.size === 0) { showToast('No buildings found in file', '#ff3f6c'); return; }
+  state.buildings = parsed;
+  state.selected = null;
+  renderBuildingList(); renderVtxTable(); drawOverlay();
+  modeLabel.textContent = `Loaded ${parsed.size} buildings`;
+  modeBadge.textContent = 'LOADED';
+  document.getElementById('btn-download').disabled = false;
+  showToast(`✔ Loaded ${parsed.size} buildings`);
+}
+
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault(); dropZone.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file) readFile(file);
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) readFile(e.target.files[0]); });
+
+function readFile(file) {
+  const reader = new FileReader();
+  reader.onload = ev => loadJs(ev.target.result);
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════════
+//  MAP LOAD
+// ═══════════════════════════════════════════════════════
+document.getElementById('btn-load-map').addEventListener('click', () => {
+  const src = mapPathInput.value.trim();
+  if (src) loadMapImage(src);
+});
+mapPathInput.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('btn-load-map').click(); });
+
+// ═══════════════════════════════════════════════════════
+//  DOWNLOAD
+// ═══════════════════════════════════════════════════════
+document.getElementById('btn-download').addEventListener('click', () => {
+  const content = exportCampusMapRendererJs();
+  const blob = new Blob([content], { type: 'text/javascript' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'campusMapRenderer.js'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('✔ campusMapRenderer.js downloaded');
+});
+
+// ═══════════════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg, bg = 'var(--green)') {
+  toast.textContent = msg;
+  toast.style.background = bg;
+  toast.style.color = bg === 'var(--green)' ? '#000' : '#fff';
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 2000);
+}
+
+// ═══════════════════════════════════════════════════════
+//  KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'a' || e.key === 'A') document.getElementById('tool-add').click();
+  if (e.key === 'm' || e.key === 'M') document.getElementById('tool-move').click();
+  if (e.key === 'p' || e.key === 'P') document.getElementById('tool-pan').click();
+  if (e.key === 'f' || e.key === 'F') fitToView();
+  if ((e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+    // undo last vertex
+    if (!state.selected) return;
+    const verts = state.buildings.get(state.selected);
+    if (verts.length) { verts.pop(); renderVtxTable(); renderBuildingList(); drawOverlay(); }
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+//  RESIZE
+// ═══════════════════════════════════════════════════════
+const ro = new ResizeObserver(() => { resizeOverlay(); drawOverlay(); });
+ro.observe(wrap);
+resizeOverlay();
+
+// ── INIT ──
+modeLabel.textContent = 'Drop a campusMapRenderer.js file to begin';
+</script>
+</body>
+</html>

@@ -1,0 +1,1695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UTech Graph Editor — graphDatabase.js Maintenance</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --bg:       #070a0f;
+  --surf:     #0c1018;
+  --panel:    #111621;
+  --panel2:   #161d2e;
+  --border:   #1a2236;
+  --border2:  #243050;
+  --utech:    #0E004E;
+  --gold:     #FFD201;
+  --golddim:  #a08800;
+  --goldglow: #FFD20120;
+  --cyan:     #00d4ff;
+  --cyanglow: #00d4ff20;
+  --green:    #00f5a0;
+  --red:      #ff4060;
+  --orange:   #ff9020;
+  --purple:   #a070ff;
+  --text:     #e0e8f8;
+  --muted:    #4a5a7a;
+  --muted2:   #6a7a9a;
+  --node-walk:  #00d4ff;
+  --node-bld:   #FFD201;
+  --node-gate:  #00f5a0;
+  --node-new:   #ff9020;
+  --edge-color: rgba(0,212,255,0.95);
+  --edge-hi:    #FFD201;
+  --path-color: #ff4060;
+  --radius: 8px;
+  --ease: cubic-bezier(.4,0,.2,1);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+body{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  height:100vh;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+
+/* ── HEADER ── */
+header{
+  background:linear-gradient(100deg,#050025 0%,#0E004E 40%,#07003a 100%);
+  border-bottom:2px solid var(--gold);
+  padding:0 20px;
+  height:52px;
+  display:flex;
+  align-items:center;
+  gap:14px;
+  flex-shrink:0;
+  box-shadow:0 4px 30px #00000099;
+  position:relative;
+  z-index:50;
+}
+.hbadge{
+  background:var(--gold);
+  color:#0E004E;
+  font-family:'Fira Code',monospace;
+  font-weight:600;
+  font-size:.65rem;
+  padding:3px 9px;
+  border-radius:4px;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  flex-shrink:0;
+}
+header h1{font-size:1rem;font-weight:800;color:#fff;letter-spacing:-.01em}
+header p{font-size:.68rem;color:rgba(255,255,255,.4);margin-left:2px}
+.header-group{display:flex;flex-direction:column;gap:1px}
+.hright{margin-left:auto;display:flex;gap:8px;align-items:center}
+
+/* ── BUTTONS ── */
+.btn{
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-weight:600;font-size:.78rem;
+  padding:6px 14px;border-radius:6px;border:none;cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px;
+  transition:all .14s var(--ease);white-space:nowrap;
+}
+.btn-gold{background:var(--gold);color:#0E004E}
+.btn-gold:hover{background:#ffe84d;transform:translateY(-1px);box-shadow:0 4px 14px var(--goldglow)}
+.btn-ghost{background:transparent;color:var(--gold);border:1.5px solid var(--gold)}
+.btn-ghost:hover{background:var(--goldglow)}
+.btn-cyan{background:var(--cyan);color:#001a24;font-weight:700}
+.btn-cyan:hover{background:#33ddff;transform:translateY(-1px)}
+.btn-green{background:var(--green);color:#001a0d;font-weight:700}
+.btn-green:hover{background:#44ffb8;transform:translateY(-1px);box-shadow:0 4px 14px #00f5a033}
+.btn-red{background:transparent;color:var(--red);border:1.5px solid var(--red)}
+.btn-red:hover{background:#ff406018}
+.btn-orange{background:transparent;color:var(--orange);border:1.5px solid var(--orange)}
+.btn-orange:hover{background:#ff902018}
+.btn-purple{background:var(--purple);color:#fff}
+.btn-purple:hover{background:#b888ff}
+.btn:disabled{opacity:.35;cursor:not-allowed;transform:none!important;box-shadow:none!important}
+.btn-sm{font-size:.71rem;padding:4px 10px}
+.btn-xs{font-size:.65rem;padding:3px 8px}
+
+/* ── MAIN LAYOUT ── */
+.workspace{
+  display:grid;
+  grid-template-columns:270px 1fr 320px;
+  flex:1;
+  overflow:hidden;
+}
+
+/* ── LEFT PANEL ── */
+.left-panel{
+  background:var(--surf);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.lpanel-head{
+  padding:12px 14px 10px;
+  border-bottom:1px solid var(--border);
+}
+.lpanel-head h2{
+  font-size:.68rem;font-weight:700;
+  color:var(--gold);text-transform:uppercase;letter-spacing:.12em;
+  margin-bottom:8px;
+}
+.stats-strip{
+  display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;
+}
+.stat-pill{
+  background:var(--panel);
+  border:1px solid var(--border2);
+  border-radius:20px;
+  padding:2px 9px;
+  font-family:'Fira Code',monospace;
+  font-size:.62rem;
+  display:flex;align-items:center;gap:5px;
+  color:var(--muted2);
+}
+.pill-dot{width:6px;height:6px;border-radius:50%}
+.search-row{position:relative}
+.search-row input{
+  width:100%;background:var(--panel);
+  border:1px solid var(--border2);border-radius:6px;
+  padding:6px 10px 6px 28px;
+  color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:.78rem;outline:none;
+  transition:border-color .14s;
+}
+.search-row input:focus{border-color:var(--gold)}
+.search-row::before{
+  content:'⌕';position:absolute;left:9px;top:50%;transform:translateY(-50%);
+  color:var(--muted);font-size:.9rem;pointer-events:none;
+}
+.node-list{flex:1;overflow-y:auto;padding:6px}
+.node-item{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 10px;border-radius:6px;
+  cursor:pointer;transition:all .12s var(--ease);
+  border:1px solid transparent;margin-bottom:3px;
+}
+.node-item:hover{background:var(--panel2);border-color:var(--border2)}
+.node-item.active{background:var(--goldglow);border-color:var(--gold)}
+.node-item.path-node{background:#ff406015;border-color:#ff406040}
+.type-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.ni-name{font-size:.76rem;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ni-meta{font-size:.61rem;color:var(--muted);font-family:'Fira Code',monospace}
+.ni-deg{
+  font-size:.6rem;font-family:'Fira Code',monospace;
+  background:var(--panel);border:1px solid var(--border2);
+  border-radius:10px;padding:1px 6px;color:var(--muted2);flex-shrink:0;
+}
+.left-footer{
+  padding:10px 12px;border-top:1px solid var(--border);
+  display:flex;gap:6px;flex-wrap:wrap;
+}
+
+/* ── CANVAS AREA ── */
+.canvas-area{
+  display:flex;flex-direction:column;
+  position:relative;overflow:hidden;
+}
+.toolbar{
+  background:var(--surf);border-bottom:1px solid var(--border);
+  padding:8px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  flex-shrink:0;z-index:10;
+}
+.toolbar h3{font-size:.8rem;font-weight:700;margin-right:4px}
+.tsep{width:1px;height:22px;background:var(--border2);flex-shrink:0}
+.tbtn{
+  background:var(--panel);border:1px solid var(--border2);border-radius:5px;
+  color:var(--muted2);font-size:.72rem;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;
+  padding:4px 11px;cursor:pointer;transition:all .13s var(--ease);
+  display:inline-flex;align-items:center;gap:4px;
+}
+.tbtn:hover{border-color:var(--gold);color:var(--text)}
+.tbtn.act{background:var(--goldglow);border-color:var(--gold);color:var(--gold)}
+.tbtn.act-red{background:#ff406018;border-color:var(--red);color:var(--red)}
+.tbtn.act-cyan{background:var(--cyanglow);border-color:var(--cyan);color:var(--cyan)}
+.map-canvas-wrap{
+  flex:1;overflow:auto;position:relative;
+  background:radial-gradient(ellipse at 30% 70%,#0E004E22 0%,transparent 55%),
+             radial-gradient(ellipse at 70% 30%,#00d4ff08 0%,transparent 50%),var(--bg);
+}
+canvas#graphCanvas{display:block;cursor:crosshair}
+.zoom-ctrl{
+  position:absolute;bottom:14px;left:14px;
+  display:flex;flex-direction:column;gap:3px;
+}
+.zbtn{
+  background:var(--panel);border:1px solid var(--border2);
+  border-radius:5px;color:var(--text);width:28px;height:28px;
+  font-size:.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .12s var(--ease);
+}
+.zbtn:hover{border-color:var(--gold);color:var(--gold)}
+.coord-hud{
+  position:absolute;bottom:14px;right:14px;
+  background:var(--panel);border:1px solid var(--border2);
+  border-radius:6px;padding:5px 11px;
+  font-family:'Fira Code',monospace;font-size:.66rem;color:var(--muted2);
+  pointer-events:none;
+}
+.canvas-overlay-msg{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  text-align:center;color:var(--muted);font-size:.85rem;line-height:1.9;
+  pointer-events:none;
+}
+.canvas-overlay-msg .big{font-size:2.5rem;display:block;margin-bottom:10px}
+
+/* ── RIGHT PANEL ── */
+.right-panel{
+  background:var(--surf);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.rtabs{display:flex;border-bottom:1px solid var(--border)}
+.rtab{
+  flex:1;padding:10px 6px;text-align:center;
+  font-size:.68rem;font-weight:700;color:var(--muted);cursor:pointer;
+  border-bottom:2px solid transparent;transition:all .13s var(--ease);
+  letter-spacing:.04em;text-transform:uppercase;
+}
+.rtab.act{color:var(--gold);border-bottom-color:var(--gold)}
+.rtab:hover:not(.act){color:var(--text)}
+.rscroll{flex:1;overflow-y:auto;padding:14px}
+.rtab-panel{display:none}
+.rtab-panel.act{display:block}
+
+/* Node props */
+.prop-block{
+  background:var(--panel);border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px;margin-bottom:12px;
+}
+.prop-block h3{
+  font-size:.7rem;font-weight:700;color:var(--gold);
+  text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;
+  display:flex;align-items:center;gap:8px;
+}
+.prop-block h3::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field label{font-size:.65rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.field input,.field select,.field textarea{
+  background:var(--panel2);border:1px solid var(--border2);border-radius:6px;
+  padding:7px 10px;color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:.8rem;
+  outline:none;transition:border-color .13s;width:100%;
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold)}
+.field select{cursor:pointer}
+.field textarea{resize:vertical;min-height:70px;font-family:'Fira Code',monospace;font-size:.72rem}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* Neighbor list */
+.neighbor-list{display:flex;flex-direction:column;gap:4px;max-height:180px;overflow-y:auto;margin-bottom:8px}
+.nbr-item{
+  display:flex;align-items:center;gap:7px;padding:5px 9px;
+  background:var(--panel2);border:1px solid var(--border);border-radius:5px;
+  font-size:.74rem;
+}
+.nbr-name{flex:1;font-weight:500}
+.nbr-dist{font-family:'Fira Code',monospace;font-size:.65rem;color:var(--muted2)}
+.nbr-del{background:#ff406022;border:1px solid var(--red);color:var(--red);cursor:pointer;font-size:.72rem;padding:3px 8px;border-radius:4px;font-weight:700;transition:all .12s}
+.nbr-del:hover{background:var(--red);color:#fff;transform:scale(1.05)}
+
+/* Path preview */
+.path-steps{
+  background:var(--panel2);border:1px solid var(--border);border-radius:6px;
+  padding:10px;font-family:'Fira Code',monospace;font-size:.68rem;
+  max-height:200px;overflow-y:auto;line-height:1.9;
+}
+.path-steps .step{color:var(--muted2)}
+.path-steps .step.hi{color:var(--text)}
+.path-steps .path-cost{color:var(--gold);font-weight:600}
+
+/* Code */
+.code-block{
+  background:#04060c;border:1px solid var(--border);border-radius:6px;
+  padding:12px 14px;font-family:'Fira Code',monospace;font-size:.66rem;
+  color:#8899cc;overflow:auto;white-space:pre;line-height:1.75;max-height:340px;
+}
+
+/* Validation */
+.val-item{
+  display:flex;align-items:flex-start;gap:8px;padding:7px 10px;
+  border-radius:6px;border-left:3px solid transparent;
+  background:var(--panel2);margin-bottom:6px;font-size:.75rem;
+}
+.val-item.ok{border-color:var(--green);color:#88ffcc}
+.val-item.warn{border-color:var(--orange);color:#ffcc88}
+.val-item.err{border-color:var(--red);color:#ff8898}
+
+/* Diff */
+.diff-block{
+  background:#04060c;border:1px solid var(--border);border-radius:6px;
+  padding:12px;font-family:'Fira Code',monospace;font-size:.64rem;
+  max-height:300px;overflow:auto;white-space:pre;line-height:1.8;
+}
+.dl-add{color:var(--green)}
+.dl-rem{color:var(--red)}
+.dl-ctx{color:var(--muted)}
+
+/* Upload */
+.upload-zone{
+  border:2px dashed var(--border2);border-radius:var(--radius);
+  padding:24px 14px;text-align:center;cursor:pointer;
+  transition:all .14s var(--ease);position:relative;margin-bottom:12px;
+}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--gold);background:var(--goldglow)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-zone p{color:var(--muted);font-size:.78rem}
+.uz-icon{font-size:1.7rem;display:block;margin-bottom:7px}
+
+/* Changelog */
+.cl-item{
+  padding:7px 10px;background:var(--panel2);border-radius:5px;
+  border-left:3px solid var(--cyan);margin-bottom:5px;font-size:.73rem;
+}
+.cl-item.mod{border-color:var(--gold)}
+.cl-item.del{border-color:var(--red)}
+.cl-item.add{border-color:var(--green)}
+.cl-ts{font-size:.6rem;color:var(--muted);font-family:'Fira Code',monospace;float:right}
+
+/* Toast */
+#toast{
+  position:fixed;bottom:20px;right:20px;
+  background:var(--panel2);border:1px solid var(--border2);
+  border-radius:8px;padding:10px 16px;font-size:.8rem;
+  box-shadow:0 8px 28px #00000099;
+  transform:translateY(50px);opacity:0;
+  transition:all .25s cubic-bezier(.34,1.56,.64,1);z-index:9999;
+  pointer-events:none;display:flex;align-items:center;gap:8px;max-width:300px;
+}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.s{border-color:var(--green)}
+#toast.e{border-color:var(--red)}
+#toast.i{border-color:var(--cyan)}
+#toast.w{border-color:var(--orange)}
+
+.empty-note{color:var(--muted);font-size:.76rem;text-align:center;padding:16px;line-height:1.8}
+.tag{display:inline-block;font-size:.6rem;font-family:'Fira Code',monospace;font-weight:600;padding:1px 6px;border-radius:3px;text-transform:uppercase}
+.tag-building{background:#FFD20120;color:var(--gold);border:1px solid #FFD20140}
+.tag-walkway{background:#00d4ff18;color:var(--cyan);border:1px solid #00d4ff40}
+.tag-gate{background:#00f5a018;color:var(--green);border:1px solid #00f5a040}
+.tag-new{background:#ff902018;color:var(--orange);border:1px solid #ff902040}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hbadge">UTech Dev</div>
+  <div class="header-group">
+    <h1>Graph Editor — graphDatabase.js Maintenance</h1>
+    <p>Nodes · Edges · Pathfinding for the UTech Papine campus navigation graph</p>
+  </div>
+  <div class="hright">
+    <button class="btn btn-ghost btn-sm" id="btnLoadMap">🗺 Load Map</button>
+    <input type="file" id="mapInput" accept="image/*" style="display:none">
+    <button class="btn btn-ghost btn-sm" id="btnLoadJS">📂 Load JS</button>
+    <input type="file" id="jsInput" accept=".js" style="display:none">
+    <button class="btn btn-green btn-sm" id="btnExport" disabled>⬇ Download graphDatabase.js</button>
+  </div>
+</header>
+
+<div class="workspace">
+
+  <!-- ── LEFT: Node List ── -->
+  <aside class="left-panel">
+    <div class="lpanel-head">
+      <h2>📍 Nodes</h2>
+      <div class="stats-strip" id="statsStrip">
+        <div class="stat-pill"><span class="pill-dot" style="background:var(--node-bld)"></span><span id="cntBld">0</span> buildings</div>
+        <div class="stat-pill"><span class="pill-dot" style="background:var(--node-walk)"></span><span id="cntWalk">0</span> walkways</div>
+        <div class="stat-pill"><span class="pill-dot" style="background:var(--node-gate)"></span><span id="cntGate">0</span> gates</div>
+      </div>
+      <div class="search-row">
+        <input type="text" id="nodeSearch" placeholder="Search nodes…">
+      </div>
+    </div>
+    <div class="node-list" id="nodeList">
+      <div class="empty-note">Load <strong>graphDatabase.js</strong><br>or add nodes to get started.</div>
+    </div>
+    <div class="left-footer">
+      <button class="btn btn-cyan btn-sm" id="btnAddNode">+ Node</button>
+      <button class="btn btn-ghost btn-sm" id="btnValidate">✓ Validate</button>
+      <button class="btn btn-ghost btn-sm" id="btnFitView">⊙ Fit</button>
+    </div>
+  </aside>
+
+  <!-- ── CENTRE: Canvas ── -->
+  <section class="canvas-area">
+    <div class="toolbar">
+      <h3 id="toolbarTitle" style="color:var(--muted)">No file loaded</h3>
+      <div class="tsep"></div>
+      <button class="tbtn act" id="tMove" title="Move/Select nodes (M)">↖ Move</button>
+      <button class="tbtn" id="tEdge" title="Click two nodes to add edge (E)">⟷ Edge</button>
+      <button class="tbtn" id="tAdd" title="Click map to place new node (N)">✚ Place</button>
+      <button class="tbtn" id="tDel" title="Click node to delete (Del)">✕ Delete</button>
+      <button class="tbtn" id="tPath" title="Click source then destination to preview path (P)">⚡ Path</button>
+      <button class="tbtn" id="tRmEdge" title="Click two connected nodes to remove their edge (R)">✂ Rm Edge</button>
+      <div class="tsep"></div>
+      <button class="tbtn" id="btnShowEdges" title="Toggle edge visibility">👁 Edges</button>
+      <button class="tbtn" id="btnShowLabels" title="Toggle label visibility">🏷 Labels</button>
+      <div class="tsep" style="margin-left:auto"></div>
+      <span id="zoomLbl" style="font-size:.67rem;color:var(--muted);font-family:'Fira Code',monospace">100%</span>
+    </div>
+    <div class="map-canvas-wrap" id="canvasWrap">
+      <div class="canvas-overlay-msg" id="overlayMsg">
+        <span class="big">🗺</span>
+        <strong>Load the map image to begin</strong><br>
+        Then load <code style="color:var(--gold);font-size:.8rem">graphDatabase.js</code><br>
+        to see and edit the navigation graph
+      </div>
+      <canvas id="graphCanvas"></canvas>
+      <div class="zoom-ctrl">
+        <button class="zbtn" id="zIn">+</button>
+        <button class="zbtn" id="zOut">−</button>
+        <button class="zbtn" id="zReset">⊙</button>
+      </div>
+      <div class="coord-hud" id="coordHud">x: — y: —</div>
+    </div>
+  </section>
+
+  <!-- ── RIGHT: Properties ── -->
+  <aside class="right-panel">
+    <div class="rtabs">
+      <div class="rtab act" data-rt="props">Props</div>
+      <div class="rtab" data-rt="path">Path</div>
+      <div class="rtab" data-rt="code">Code</div>
+      <div class="rtab" data-rt="valid">Valid</div>
+      <div class="rtab" data-rt="log">Log</div>
+    </div>
+    <div class="rscroll">
+
+      <!-- PROPS TAB -->
+      <div class="rtab-panel act" id="rtp-props">
+        <div class="prop-block" id="nodePropsBlock">
+          <h3>Node Properties</h3>
+          <div class="empty-note">Select a node to edit its properties.</div>
+        </div>
+        <div class="prop-block" id="edgePropsBlock">
+          <h3>Connections</h3>
+          <div class="empty-note">Select a node to manage its edges.</div>
+        </div>
+        <div class="prop-block">
+          <h3>Add New Node</h3>
+          <div class="field"><label>Name *</label><input type="text" id="addName" placeholder="e.g., Faculty of Health Sciences"></div>
+          <div class="field"><label>Type *</label>
+            <select id="addType">
+              <option value="building">building</option>
+              <option value="walkway">walkway</option>
+              <option value="gate">gate</option>
+            </select>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>X Coord</label><input type="number" id="addX" value="0" placeholder="x"></div>
+            <div class="field"><label>Y Coord</label><input type="number" id="addY" value="0" placeholder="y"></div>
+          </div>
+          <div class="action-row" style="display:flex;gap:7px;margin-top:4px">
+            <button class="btn btn-cyan btn-sm" id="btnCommitAdd">+ Add Node</button>
+            <span style="font-size:.68rem;color:var(--muted);align-self:center">or use Place tool on map</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATH TAB -->
+      <div class="rtab-panel" id="rtp-path">
+        <div class="prop-block">
+          <h3>Shortest Path Preview</h3>
+          <div class="field"><label>Source Node</label>
+            <select id="pathSrc"><option value="">— select —</option></select>
+          </div>
+          <div class="field"><label>Destination Node</label>
+            <select id="pathDst"><option value="">— select —</option></select>
+          </div>
+          <div style="display:flex;gap:7px;margin-bottom:12px">
+            <button class="btn btn-purple btn-sm" id="btnFindPath">⚡ Find Path</button>
+            <button class="btn btn-ghost btn-sm" id="btnClearPath">✕ Clear</button>
+          </div>
+          <div id="pathResult"><div class="empty-note">Select two nodes and click Find Path.</div></div>
+        </div>
+        <div class="prop-block">
+          <h3>Path Steps</h3>
+          <div class="path-steps" id="pathSteps"><span style="color:var(--muted)">No path computed yet.</span></div>
+        </div>
+      </div>
+
+      <!-- CODE TAB -->
+      <div class="rtab-panel" id="rtp-code">
+        <div style="display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap">
+          <button class="btn btn-gold btn-sm" id="btnGenCode">⚡ Generate</button>
+          <button class="btn btn-ghost btn-sm" id="btnCopyCode">📋 Copy</button>
+          <button class="btn btn-green btn-sm" id="btnDlCode" disabled>⬇ Download</button>
+        </div>
+        <div class="prop-block">
+          <h3>Import</h3>
+          <div class="upload-zone" id="jsUploadZone">
+            <input type="file" id="jsUploadInput" accept=".js">
+            <span class="uz-icon">📄</span>
+            <p><strong>Click or drop</strong> graphDatabase.js here</p>
+          </div>
+          <div class="field"><label>Or paste JS code</label><textarea id="jsPasteArea" rows="5" placeholder="Paste graphDatabase.js contents…"></textarea></div>
+          <button class="btn btn-cyan btn-sm" id="btnParseCode">⚡ Parse</button>
+        </div>
+        <div class="prop-block">
+          <h3>Generated Code</h3>
+          <pre class="code-block" id="codeOutput">// Click "Generate" to preview the output…</pre>
+        </div>
+      </div>
+
+      <!-- VALIDATION TAB -->
+      <div class="rtab-panel" id="rtp-valid">
+        <button class="btn btn-gold btn-sm" id="btnRunValidate" style="margin-bottom:12px;width:100%">▶ Run Validation</button>
+        <div id="validationResults"><div class="empty-note">Click "Run Validation" to check the graph.</div></div>
+        <div class="prop-block" style="margin-top:12px">
+          <h3>Diff (vs loaded file)</h3>
+          <pre class="diff-block" id="diffOutput">// Load a file first, then generate code to see the diff.</pre>
+          <div style="display:flex;gap:7px;margin-top:8px">
+            <button class="btn btn-ghost btn-sm" id="btnGenDiff">↕ Generate Diff</button>
+            <button class="btn btn-ghost btn-sm" id="btnCopyDiff">📋 Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOG TAB -->
+      <div class="rtab-panel" id="rtp-log">
+        <div id="changelogEl"><div class="empty-note">No changes yet.</div></div>
+        <button class="btn btn-red btn-xs" id="btnClearLog" style="margin-top:10px">Clear Log</button>
+      </div>
+
+    </div>
+  </aside>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// DATA STRUCTURES (mirrors the app)
+// ═══════════════════════════════════════════════════════════════
+class GNode {
+  constructor(name, type, x, y) {
+    this.name = name;
+    this.type = type;
+    this.x_coor = x;
+    this.y_coor = y;
+    this.neighbors = []; // array of GNode refs
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+const S = {
+  nodes: new Map(),         // name → GNode
+  mapImg: null,
+  zoom: 1, panX: 0, panY: 0,
+  tool: 'move',             // move|edge|add|del|path|rmEdge
+  activeNode: null,         // GNode
+  edgeFrom: null,           // GNode (for edge tool first click)
+  rmEdgeFrom: null,         // GNode (for remove-edge tool first click)
+  pathFrom: null,           // GNode (for path tool)
+  pathResult: null,         // array of GNode
+  dragging: null,           // GNode
+  dragOffX: 0, dragOffY: 0,
+  isPanning: false,
+  panStart: null,
+  showEdges: true,
+  showLabels: true,
+  changelog: [],
+  originalSource: '',
+  generatedCode: '',
+  newNodeMode: false,       // from Place tool
+};
+
+const canvas = document.getElementById('graphCanvas');
+const ctx = canvas.getContext('2d');
+const wrap = document.getElementById('canvasWrap');
+
+// ═══════════════════════════════════════════════════════════════
+// COORDINATE HELPERS
+// ═══════════════════════════════════════════════════════════════
+function toCanvas(mx, my) { return { x: mx * S.zoom + S.panX, y: my * S.zoom + S.panY }; }
+function toMap(cx, cy)    { return { x: (cx - S.panX) / S.zoom, y: (cy - S.panY) / S.zoom }; }
+function nodeColor(type) {
+  return type === 'building' ? '#FFD201' : type === 'gate' ? '#00f5a0' : '#00d4ff';
+}
+function nodeRadius(type) { return type === 'building' ? 10 : type === 'gate' ? 9 : 6; }
+
+// ═══════════════════════════════════════════════════════════════
+// DRAW
+// ═══════════════════════════════════════════════════════════════
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  if (!S.mapImg && !S.nodes.size) {
+    return; // placeholder shown by CSS
+  }
+
+  ctx.save();
+  ctx.translate(S.panX, S.panY);
+  ctx.scale(S.zoom, S.zoom);
+
+  if (S.mapImg) ctx.drawImage(S.mapImg, 0, 0);
+
+  const nodes = Array.from(S.nodes.values());
+
+  // ── Edges ──
+  if (S.showEdges) {
+    const drawn = new Set();
+    for (const n of nodes) {
+      for (const nb of n.neighbors) {
+        const key = [n.name, nb.name].sort().join('|');
+        if (drawn.has(key)) continue;
+        drawn.add(key);
+        const inPath = S.pathResult && isEdgeInPath(n, nb);
+        ctx.strokeStyle = inPath ? '#ff4060' : 'rgba(0,212,255,0.92)';
+        ctx.lineWidth = (inPath ? 3.5 : 2.2) / S.zoom;
+        ctx.beginPath();
+        ctx.moveTo(n.x_coor, n.y_coor);
+        ctx.lineTo(nb.x_coor, nb.y_coor);
+        ctx.stroke();
+
+        // edge weight label
+        if (inPath) {
+          const mx = (n.x_coor + nb.x_coor) / 2;
+          const my = (n.y_coor + nb.y_coor) / 2;
+          const d = Math.round(Math.hypot(nb.x_coor - n.x_coor, nb.y_coor - n.y_coor));
+          ctx.fillStyle = '#ff4060dd';
+          ctx.font = `${Math.max(10, 11 / S.zoom)}px Fira Code`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(d, mx, my);
+        }
+      }
+    }
+  }
+
+  // ── Edge-from hint ──
+  if (S.edgeFrom) {
+    ctx.strokeStyle = 'rgba(255,210,1,0.6)';
+    ctx.lineWidth = 2 / S.zoom;
+    ctx.setLineDash([6 / S.zoom, 4 / S.zoom]);
+    ctx.beginPath();
+    ctx.arc(S.edgeFrom.x_coor, S.edgeFrom.y_coor, nodeRadius(S.edgeFrom.type) * 2.5 / S.zoom, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // ── Remove-edge-from hint ──
+  if (S.rmEdgeFrom) {
+    ctx.strokeStyle = 'rgba(255,64,96,0.7)';
+    ctx.lineWidth = 2 / S.zoom;
+    ctx.setLineDash([6 / S.zoom, 4 / S.zoom]);
+    ctx.beginPath();
+    ctx.arc(S.rmEdgeFrom.x_coor, S.rmEdgeFrom.y_coor, nodeRadius(S.rmEdgeFrom.type) * 2.5 / S.zoom, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // ── Nodes ──
+  for (const n of nodes) {
+    const r = nodeRadius(n.type) / S.zoom;
+    const col = nodeColor(n.type);
+    const isActive = S.activeNode === n;
+    const isPathNode = S.pathResult && S.pathResult.includes(n);
+    const isEdgeFrom = S.edgeFrom === n;
+    const isPathFrom = S.pathFrom === n;
+    const isRmEdgeFrom = S.rmEdgeFrom === n;
+
+    // glow ring for special states
+    if (isActive || isEdgeFrom || isPathFrom || isRmEdgeFrom) {
+      ctx.beginPath();
+      ctx.arc(n.x_coor, n.y_coor, r * 2.2, 0, Math.PI * 2);
+      ctx.fillStyle = isRmEdgeFrom ? 'rgba(255,64,96,0.18)' : isActive ? 'rgba(255,210,1,0.15)' : 'rgba(160,112,255,0.2)';
+      ctx.fill();
+    }
+
+    // path highlight ring
+    if (isPathNode) {
+      ctx.beginPath();
+      ctx.arc(n.x_coor, n.y_coor, r * 2, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,64,96,0.18)';
+      ctx.fill();
+    }
+
+    // node circle
+    ctx.beginPath();
+    ctx.arc(n.x_coor, n.y_coor, r, 0, Math.PI * 2);
+    ctx.fillStyle = isPathNode ? '#ff4060' : col;
+    ctx.fill();
+    ctx.strokeStyle = isActive ? '#fff' : '#00000055';
+    ctx.lineWidth = (isActive ? 2 : 1) / S.zoom;
+    ctx.stroke();
+
+    // labels
+    if (S.showLabels && (S.zoom > 0.18 || n.type !== 'walkway')) {
+      const short = n.name.startsWith('w') && /^w\d+$/.test(n.name) ? n.name : n.name.split(' ').slice(0, 2).join(' ');
+      ctx.font = `bold ${Math.max(7, (n.type === 'building' ? 11 : 8) / S.zoom)}px Plus Jakarta Sans`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      // dark outline for contrast
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+      ctx.lineWidth = 3 / S.zoom;
+      ctx.lineJoin = 'round';
+      ctx.strokeText(short, n.x_coor, n.y_coor + r + 2 / S.zoom);
+      ctx.fillStyle = n.type === 'walkway' ? '#ffffff' : '#FFD201';
+      ctx.fillText(short, n.x_coor, n.y_coor + r + 2 / S.zoom);
+    }
+  }
+
+  ctx.restore();
+}
+
+function isEdgeInPath(a, b) {
+  if (!S.pathResult) return false;
+  for (let i = 0; i + 1 < S.pathResult.length; i++) {
+    if ((S.pathResult[i] === a && S.pathResult[i+1] === b) ||
+        (S.pathResult[i] === b && S.pathResult[i+1] === a)) return true;
+  }
+  return false;
+}
+
+function resizeCanvas() {
+  const W = wrap.clientWidth || 900;
+  const H = wrap.clientHeight || 600;
+  if (S.mapImg) {
+    canvas.width  = Math.max(W, S.mapImg.width  * S.zoom + Math.abs(S.panX) + 100);
+    canvas.height = Math.max(H, S.mapImg.height * S.zoom + Math.abs(S.panY) + 100);
+  } else {
+    canvas.width = W; canvas.height = H;
+  }
+  draw();
+}
+new ResizeObserver(() => resizeCanvas()).observe(wrap);
+
+// ═══════════════════════════════════════════════════════════════
+// CANVAS EVENTS
+// ═══════════════════════════════════════════════════════════════
+function getXY(e) {
+  const r = canvas.getBoundingClientRect();
+  return { cx: e.clientX - r.left, cy: e.clientY - r.top };
+}
+function findNodeAt(mx, my, radius = 16) {
+  let best = null, bestD = Infinity;
+  for (const n of S.nodes.values()) {
+    const d = Math.hypot(n.x_coor - mx, n.y_coor - my);
+    const hitR = (nodeRadius(n.type) + radius) / S.zoom;
+    if (d < hitR && d < bestD) { bestD = d; best = n; }
+  }
+  return best;
+}
+
+canvas.addEventListener('mousemove', e => {
+  const { cx, cy } = getXY(e);
+  if (S.isPanning && S.panStart) {
+    S.panX += cx - S.panStart.cx; S.panY += cy - S.panStart.cy;
+    S.panStart = { cx, cy };
+    resizeCanvas(); return;
+  }
+  const { x: mx, y: my } = toMap(cx, cy);
+  document.getElementById('coordHud').textContent = `x: ${Math.round(mx)}  y: ${Math.round(my)}`;
+  if (S.dragging) {
+    S.dragging.x_coor = Math.round(mx + S.dragOffX);
+    S.dragging.y_coor = Math.round(my + S.dragOffY);
+    refreshNodeProps();
+    draw(); return;
+  }
+  draw();
+});
+
+canvas.addEventListener('mousedown', e => {
+  const { cx, cy } = getXY(e);
+  if (e.button === 1 || e.altKey) {
+    S.isPanning = true; S.panStart = { cx, cy }; e.preventDefault(); return;
+  }
+  const { x: mx, y: my } = toMap(cx, cy);
+  const hit = findNodeAt(mx, my);
+
+  if (S.tool === 'move') {
+    if (hit) {
+      S.dragging = hit;
+      S.dragOffX = hit.x_coor - mx;
+      S.dragOffY = hit.y_coor - my;
+      selectNode(hit);
+    } else {
+      selectNode(null);
+    }
+  } else if (S.tool === 'edge') {
+    if (!hit) return;
+    if (!S.edgeFrom) {
+      S.edgeFrom = hit;
+      toast(`Edge from: ${hit.name} — now click target`, 'i', 2000);
+    } else {
+      if (S.edgeFrom === hit) { S.edgeFrom = null; draw(); return; }
+      addEdge(S.edgeFrom, hit);
+      S.edgeFrom = null;
+    }
+    draw();
+  } else if (S.tool === 'add') {
+    const name = prompt('Node name:');
+    if (!name || !name.trim()) return;
+    const n = name.trim();
+    if (S.nodes.has(n)) { toast('Node name already exists', 'e'); return; }
+    const type = prompt('Type (building/walkway/gate):', 'walkway') || 'walkway';
+    const node = new GNode(n, type, Math.round(mx), Math.round(my));
+    S.nodes.set(n, node);
+    log(n, 'Node placed on map', 'add');
+    selectNode(node);
+    refreshAll();
+    toast(`"${n}" placed`, 's');
+  } else if (S.tool === 'del') {
+    if (!hit) return;
+    if (!confirm(`Delete node "${hit.name}" and all its edges?`)) return;
+    deleteNode(hit);
+  } else if (S.tool === 'path') {
+    if (!hit) return;
+    if (!S.pathFrom) {
+      S.pathFrom = hit;
+      toast(`Path from: ${hit.name} — click destination`, 'i', 2500);
+      draw();
+    } else {
+      runPath(S.pathFrom, hit);
+      S.pathFrom = null;
+    }
+  } else if (S.tool === 'rmEdge') {
+    if (!hit) return;
+    if (!S.rmEdgeFrom) {
+      S.rmEdgeFrom = hit;
+      toast(`Remove edge from: ${hit.name} — click connected node`, 'i', 2500);
+      draw();
+    } else {
+      if (S.rmEdgeFrom === hit) { S.rmEdgeFrom = null; draw(); return; }
+      const a = S.rmEdgeFrom, b = hit;
+      const aHasB = a.neighbors.includes(b);
+      const bHasA = b.neighbors.includes(a);
+      if (!aHasB && !bHasA) {
+        toast(`No edge between "${a.name}" and "${b.name}"`, 'e');
+      } else {
+        removeEdgeByNames(a.name, b.name);
+      }
+      S.rmEdgeFrom = null;
+      draw();
+    }
+  }
+});
+
+canvas.addEventListener('mouseup', () => {
+  if (S.dragging) {
+    log(S.dragging.name, `Moved to (${S.dragging.x_coor}, ${S.dragging.y_coor})`, 'mod');
+    S.dragging = null;
+  }
+  S.isPanning = false; S.panStart = null;
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const { cx, cy } = getXY(e);
+  const delta = e.deltaY < 0 ? 1.12 : 0.89;
+  const newZ = Math.min(12, Math.max(0.1, S.zoom * delta));
+  const { x: mx, y: my } = toMap(cx, cy);
+  S.zoom = newZ;
+  S.panX = cx - mx * S.zoom;
+  S.panY = cy - my * S.zoom;
+  updateZoomLbl(); resizeCanvas();
+}, { passive: false });
+
+function updateZoomLbl() {
+  document.getElementById('zoomLbl').textContent = Math.round(S.zoom * 100) + '%';
+}
+
+// Zoom buttons
+document.getElementById('zIn').addEventListener('click', () => { S.zoom = Math.min(12, S.zoom * 1.25); updateZoomLbl(); resizeCanvas(); });
+document.getElementById('zOut').addEventListener('click', () => { S.zoom = Math.max(0.1, S.zoom * 0.8); updateZoomLbl(); resizeCanvas(); });
+document.getElementById('zReset').addEventListener('click', () => fitView());
+document.getElementById('btnFitView').addEventListener('click', () => fitView());
+
+function fitView() {
+  if (!S.mapImg && !S.nodes.size) return;
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  if (S.mapImg) {
+    S.zoom = Math.min(W / S.mapImg.width, H / S.mapImg.height, 1);
+  } else {
+    const xs = Array.from(S.nodes.values()).map(n => n.x_coor);
+    const ys = Array.from(S.nodes.values()).map(n => n.y_coor);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    S.zoom = Math.min(W / (maxX - minX + 100), H / (maxY - minY + 100), 2);
+    S.panX = -minX * S.zoom + 50; S.panY = -minY * S.zoom + 50;
+    updateZoomLbl(); resizeCanvas(); return;
+  }
+  S.panX = 0; S.panY = 0;
+  updateZoomLbl(); resizeCanvas();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TOOLS
+// ═══════════════════════════════════════════════════════════════
+const toolBtns = { move: 'tMove', edge: 'tEdge', add: 'tAdd', del: 'tDel', path: 'tPath', rmEdge: 'tRmEdge' };
+Object.entries(toolBtns).forEach(([tool, id]) => {
+  document.getElementById(id).addEventListener('click', () => {
+    S.tool = tool;
+    S.edgeFrom = null; S.pathFrom = null; S.rmEdgeFrom = null;
+    if (tool !== 'path') { S.pathResult = null; document.getElementById('pathResult').innerHTML = '<div class="empty-note">Run a path to see result here.</div>'; }
+    Object.values(toolBtns).forEach(bid => {
+      const b = document.getElementById(bid);
+      b.classList.remove('act','act-red','act-cyan');
+    });
+    const clsMap = { move: 'act', edge: 'act', add: 'act-cyan', del: 'act-red', path: 'act', rmEdge: 'act-red' };
+    document.getElementById(id).classList.add(clsMap[tool] || 'act');
+    draw();
+  });
+});
+
+document.getElementById('btnShowEdges').addEventListener('click', function() {
+  S.showEdges = !S.showEdges;
+  this.classList.toggle('act', S.showEdges);
+  draw();
+});
+document.getElementById('btnShowEdges').classList.add('act');
+
+document.getElementById('btnShowLabels').addEventListener('click', function() {
+  S.showLabels = !S.showLabels;
+  this.classList.toggle('act', S.showLabels);
+  draw();
+});
+document.getElementById('btnShowLabels').classList.add('act');
+
+// ═══════════════════════════════════════════════════════════════
+// NODE SELECTION & PROPS
+// ═══════════════════════════════════════════════════════════════
+function selectNode(n) {
+  S.activeNode = n;
+  renderNodeList();
+  refreshNodeProps();
+  refreshEdgeProps();
+  if (n) {
+    // switch to props tab
+    activateRTab('props');
+    // scroll to node in list
+    const el = document.querySelector(`.node-item[data-name="${CSS.escape(n.name)}"]`);
+    if (el) el.scrollIntoView({ block: 'nearest' });
+  }
+  draw();
+}
+
+function refreshNodeProps() {
+  const el = document.getElementById('nodePropsBlock');
+  if (!S.activeNode) {
+    el.innerHTML = '<h3>Node Properties</h3><div class="empty-note">Select a node to edit its properties.</div>';
+    return;
+  }
+  const n = S.activeNode;
+  el.innerHTML = `
+    <h3>Node Properties</h3>
+    <div class="field"><label>Name</label>
+      <input id="pName" value="${esc(n.name)}" onchange="renameNode(this.value)"></div>
+    <div class="field"><label>Type</label>
+      <select id="pType" onchange="changeType(this.value)">
+        <option ${n.type==='building'?'selected':''}>building</option>
+        <option ${n.type==='walkway'?'selected':''}>walkway</option>
+        <option ${n.type==='gate'?'selected':''}>gate</option>
+      </select>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>X Coord</label>
+        <input type="number" id="pX" value="${n.x_coor}" onchange="updateCoord('x',this.value)"></div>
+      <div class="field"><label>Y Coord</label>
+        <input type="number" id="pY" value="${n.y_coor}" onchange="updateCoord('y',this.value)"></div>
+    </div>
+    <div style="display:flex;gap:7px;margin-top:4px">
+      <span class="tag tag-${n.type}">${n.type}</span>
+      <span style="font-size:.67rem;color:var(--muted);align-self:center">${n.neighbors.length} connection(s)</span>
+      <button class="btn btn-red btn-xs" style="margin-left:auto" onclick="deleteNode(S.activeNode)">🗑 Delete</button>
+    </div>`;
+}
+
+function refreshEdgeProps() {
+  const el = document.getElementById('edgePropsBlock');
+  if (!S.activeNode) {
+    el.innerHTML = '<h3>Connections</h3><div class="empty-note">Select a node to manage its edges.</div>';
+    return;
+  }
+  const n = S.activeNode;
+  const nName = JSON.stringify(n.name);
+  const nbHtml = n.neighbors.length ? n.neighbors.map(nb => {
+    const d = Math.round(Math.hypot(nb.x_coor - n.x_coor, nb.y_coor - n.y_coor));
+    return `<div class="nbr-item">
+      <span class="pill-dot" style="background:${nodeColor(nb.type)};width:7px;height:7px;border-radius:50%;flex-shrink:0"></span>
+      <span class="nbr-name">${esc(nb.name)}</span>
+      <span class="nbr-dist">${d}px</span>
+      <button class="nbr-del" onclick="removeEdgeByNames(${nName},${JSON.stringify(nb.name)})" title="Remove edge">✕</button>
+    </div>`;
+  }).join('') : '<div class="empty-note" style="margin:0">No connections yet.</div>';
+
+  const otherNodes = Array.from(S.nodes.values()).filter(x => x !== n && !n.neighbors.includes(x));
+
+  el.innerHTML = `
+    <h3>Connections</h3>
+    <div class="neighbor-list">${nbHtml}</div>
+    <div style="display:flex;gap:7px;align-items:center">
+      <select id="addNbrSel" style="flex:1;background:var(--panel2);border:1px solid var(--border2);border-radius:5px;padding:5px 8px;color:var(--text);font-size:.75rem;outline:none">
+        <option value="">— add connection —</option>
+        ${otherNodes.map(x => `<option value="${esc(x.name)}">${esc(x.name)}</option>`).join('')}
+      </select>
+      <button class="btn btn-cyan btn-sm" onclick="addEdgeByName()">+ Add</button>
+    </div>`;
+}
+
+function removeEdgeByNames(aName, bName) {
+  const a = S.nodes.get(aName);
+  const b = S.nodes.get(bName);
+  if (!a || !b) { toast('Node not found', 'e'); return; }
+  removeEdge(a, b);
+}
+
+function renameNode(newName) {
+  if (!newName.trim() || newName === S.activeNode.name) return;
+  if (S.nodes.has(newName)) { toast('Name already taken', 'e'); return; }
+  const n = S.activeNode;
+  const old = n.name;
+  S.nodes.delete(old);
+  n.name = newName.trim();
+  S.nodes.set(n.name, n);
+  log(n.name, `Renamed from "${old}"`, 'mod');
+  refreshAll();
+}
+function changeType(t) {
+  if (!S.activeNode) return;
+  S.activeNode.type = t;
+  log(S.activeNode.name, `Type changed to ${t}`, 'mod');
+  refreshAll();
+}
+function updateCoord(axis, val) {
+  const v = parseInt(val);
+  if (isNaN(v) || !S.activeNode) return;
+  if (axis === 'x') S.activeNode.x_coor = v;
+  else S.activeNode.y_coor = v;
+  draw();
+}
+
+function addEdge(a, b) {
+  if (!a.neighbors.includes(b)) { a.neighbors.push(b); }
+  if (!b.neighbors.includes(a)) { b.neighbors.push(a); }
+  log(a.name, `Edge added: ${a.name} ⟷ ${b.name}`, 'add');
+  refreshEdgeProps();
+  renderNodeList();
+  draw();
+}
+function addEdgeByName() {
+  const sel = document.getElementById('addNbrSel');
+  const name = sel.value;
+  if (!name || !S.activeNode) return;
+  const target = S.nodes.get(name);
+  if (!target) return;
+  addEdge(S.activeNode, target);
+  refreshEdgeProps();
+  toast(`Edge added: ${S.activeNode.name} ⟷ ${name}`, 's');
+}
+function removeEdge(a, b) {
+  if (!b) return;
+  a.neighbors = a.neighbors.filter(x => x !== b);
+  b.neighbors = b.neighbors.filter(x => x !== a);
+  log(a.name, `Edge removed: ${a.name} ⟷ ${bName}`, 'del');
+  refreshEdgeProps();
+  renderNodeList();
+  draw();
+  toast('Edge removed', 'i');
+}
+function deleteNode(n) {
+  if (!n) return;
+  if (!confirm(`Delete "${n.name}" and its ${n.neighbors.length} edge(s)?`)) return;
+  // remove from all neighbors
+  for (const nb of n.neighbors) {
+    nb.neighbors = nb.neighbors.filter(x => x !== n);
+  }
+  S.nodes.delete(n.name);
+  if (S.activeNode === n) S.activeNode = null;
+  if (S.edgeFrom === n) S.edgeFrom = null;
+  if (S.pathFrom === n) S.pathFrom = null;
+  if (S.pathResult) S.pathResult = null;
+  log(n.name, `Node deleted`, 'del');
+  refreshAll();
+  toast(`"${n.name}" deleted`, 'w');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ADD NODE (form)
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('btnCommitAdd').addEventListener('click', () => {
+  const name = document.getElementById('addName').value.trim();
+  const type = document.getElementById('addType').value;
+  const x    = parseInt(document.getElementById('addX').value) || 0;
+  const y    = parseInt(document.getElementById('addY').value) || 0;
+  if (!name) { toast('Name is required', 'e'); return; }
+  if (S.nodes.has(name)) { toast('Name already exists', 'e'); return; }
+  const node = new GNode(name, type, x, y);
+  S.nodes.set(name, node);
+  log(name, `Node added (${type})`, 'add');
+  document.getElementById('addName').value = '';
+  selectNode(node);
+  refreshAll();
+  toast(`"${name}" added`, 's');
+});
+
+// ═══════════════════════════════════════════════════════════════
+// NODE LIST
+// ═══════════════════════════════════════════════════════════════
+function renderNodeList(filter = '') {
+  const el = document.getElementById('nodeList');
+  const q = filter.toLowerCase();
+  const nodes = Array.from(S.nodes.values()).filter(n => !q || n.name.toLowerCase().includes(q));
+  if (!nodes.length) {
+    el.innerHTML = `<div class="empty-note">No nodes found.</div>`;
+    updateStats(); return;
+  }
+  el.innerHTML = nodes.map(n => {
+    const inPath = S.pathResult && S.pathResult.includes(n);
+    return `<div class="node-item${S.activeNode===n?' active':''}${inPath?' path-node':''}" data-name="${esc(n.name)}" onclick="selectNode(S.nodes.get(${JSON.stringify(n.name)}))">
+      <span class="type-dot" style="background:${nodeColor(n.type)}"></span>
+      <div style="flex:1;min-width:0">
+        <div class="ni-name">${esc(n.name)}</div>
+        <div class="ni-meta">(${n.x_coor}, ${n.y_coor})</div>
+      </div>
+      <span class="ni-deg">${n.neighbors.length}e</span>
+    </div>`;
+  }).join('');
+  updateStats();
+}
+
+function updateStats() {
+  let bld=0,walk=0,gate=0;
+  for (const n of S.nodes.values()) {
+    if (n.type==='building') bld++;
+    else if (n.type==='gate') gate++;
+    else walk++;
+  }
+  document.getElementById('cntBld').textContent = bld;
+  document.getElementById('cntWalk').textContent = walk;
+  document.getElementById('cntGate').textContent = gate;
+}
+
+document.getElementById('nodeSearch').addEventListener('input', e => renderNodeList(e.target.value));
+
+function refreshAll() {
+  renderNodeList(document.getElementById('nodeSearch').value);
+  refreshNodeProps();
+  refreshEdgeProps();
+  updatePathSelects();
+  document.getElementById('btnExport').disabled = S.nodes.size === 0;
+  document.getElementById('btnDlCode').disabled = S.nodes.size === 0;
+  draw();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAP LOADING
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('btnLoadMap').addEventListener('click', () => document.getElementById('mapInput').click());
+document.getElementById('mapInput').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  const url = URL.createObjectURL(f);
+  const img = new Image();
+  img.onload = () => {
+    S.mapImg = img;
+    canvas.style.display = 'block';
+    document.getElementById('overlayMsg').style.display = 'none';
+    fitView();
+    toast(`Map loaded (${img.width}×${img.height})`, 's');
+  };
+  img.onerror = () => toast('Failed to load image', 'e');
+  img.src = url;
+});
+
+// ═══════════════════════════════════════════════════════════════
+// PARSER — graphDatabase.js
+// ═══════════════════════════════════════════════════════════════
+function parseGraphDatabase(code) {
+  S.originalSource = code;
+  const nodes = new Map();
+
+  // Extract all GraphNode declarations
+  // const VARNAME = new GraphNode('name', 'type', x, y);
+  const nodeRE = /const\s+(\w+)\s*=\s*new\s+GraphNode\(\s*(['"`])([\s\S]*?)\2\s*,\s*(['"`])([\s\S]*?)\4\s*,\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)/g;
+  const varToNode = new Map(); // varName → GNode
+  let m;
+  while ((m = nodeRE.exec(code)) !== null) {
+    const varName = m[1];
+    const name    = m[3];
+    const type    = m[5];
+    const x       = Math.round(parseFloat(m[6]));
+    const y       = Math.round(parseFloat(m[7]));
+    const node    = new GNode(name, type, x, y);
+    nodes.set(name, node);
+    varToNode.set(varName, node);
+  }
+
+  // Extract edges — addBidirectionalNeighbor calls
+  const edgeRE = /(\w+)\.addBidirectionalNeighbor\((\w+)\)/g;
+  while ((m = edgeRE.exec(code)) !== null) {
+    const a = varToNode.get(m[1]);
+    const b = varToNode.get(m[2]);
+    if (a && b) {
+      if (!a.neighbors.includes(b)) a.neighbors.push(b);
+      if (!b.neighbors.includes(a)) b.neighbors.push(a);
+    }
+  }
+
+  // Also handle addNeighbor (one-directional) — add both directions for display
+  const edgeRE2 = /(\w+)\.addNeighbor\((\w+)\)/g;
+  while ((m = edgeRE2.exec(code)) !== null) {
+    const a = varToNode.get(m[1]);
+    const b = varToNode.get(m[2]);
+    if (a && b) {
+      if (!a.neighbors.includes(b)) a.neighbors.push(b);
+      // note: not necessarily bidirectional
+    }
+  }
+
+  return nodes;
+}
+
+function loadFromCode(code, label) {
+  try {
+    const parsed = parseGraphDatabase(code);
+    if (!parsed.size) throw new Error('No GraphNode declarations found');
+    S.nodes = parsed;
+    S.activeNode = null; S.edgeFrom = null; S.pathFrom = null; S.pathResult = null;
+    S.changelog = [];
+    document.getElementById('toolbarTitle').textContent = label;
+    document.getElementById('toolbarTitle').style.color = '';
+    document.getElementById('overlayMsg').style.display = 'none';
+    canvas.style.display = 'block';
+    refreshAll();
+    if (S.mapImg) draw(); else resizeCanvas();
+    log('System', `Loaded ${parsed.size} nodes from ${label}`, 'add');
+    toast(`Loaded ${parsed.size} nodes from ${label}`, 's');
+  } catch(err) {
+    toast('Parse error: ' + err.message, 'e');
+  }
+}
+
+document.getElementById('btnLoadJS').addEventListener('click', () => document.getElementById('jsInput').click());
+document.getElementById('jsInput').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  f.text().then(code => loadFromCode(code, f.name));
+});
+
+// Upload zone in code tab
+const jzu = document.getElementById('jsUploadZone');
+jzu.addEventListener('dragover', e => { e.preventDefault(); jzu.classList.add('drag'); });
+jzu.addEventListener('dragleave', () => jzu.classList.remove('drag'));
+jzu.addEventListener('drop', e => {
+  e.preventDefault(); jzu.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) f.text().then(code => loadFromCode(code, f.name));
+});
+document.getElementById('jsUploadInput').addEventListener('change', e => {
+  const f = e.target.files[0]; if (!f) return;
+  f.text().then(code => loadFromCode(code, f.name));
+});
+document.getElementById('btnParseCode').addEventListener('click', () => {
+  const code = document.getElementById('jsPasteArea').value.trim();
+  if (!code) { toast('Paste code first', 'e'); return; }
+  loadFromCode(code, 'pasted code');
+});
+
+// ═══════════════════════════════════════════════════════════════
+// DIJKSTRA PATH FINDER (mirrors FindPath.js)
+// ═══════════════════════════════════════════════════════════════
+function findPath(start, end) {
+  if (!start || !end || start === end) return start === end ? [start] : null;
+  const dist = new Map(), prev = new Map(), visited = new Set();
+  for (const n of S.nodes.values()) { dist.set(n, Infinity); prev.set(n, null); }
+  dist.set(start, 0);
+  const heap = [{ n: start, d: 0 }];
+  const heapPush = (n, d) => {
+    heap.push({ n, d });
+    heap.sort((a, b) => a.d - b.d); // simple for small graphs
+  };
+  while (heap.length) {
+    const { n: cur, d: curD } = heap.shift();
+    if (visited.has(cur)) continue;
+    visited.add(cur);
+    if (cur === end) break;
+    if (curD === Infinity) break;
+    for (const nb of cur.neighbors) {
+      if (visited.has(nb)) continue;
+      const w = Math.hypot(nb.x_coor - cur.x_coor, nb.y_coor - cur.y_coor);
+      const nd = dist.get(cur) + w;
+      if (nd < (dist.get(nb) ?? Infinity)) {
+        dist.set(nb, nd);
+        prev.set(nb, cur);
+        heapPush(nb, nd);
+      }
+    }
+  }
+  if (!visited.has(end)) return null;
+  const path = [];
+  let cur = end;
+  while (cur) { path.unshift(cur); cur = prev.get(cur); }
+  if (path[0] !== start) return null;
+  return path;
+}
+
+function runPath(src, dst) {
+  const path = findPath(src, dst);
+  S.pathResult = path;
+  const resultEl = document.getElementById('pathResult');
+  const stepsEl  = document.getElementById('pathSteps');
+
+  if (!path) {
+    resultEl.innerHTML = '<div class="val-item err">⚠ No path found between these nodes. Check graph connectivity.</div>';
+    stepsEl.innerHTML = '<span style="color:var(--red)">No path.</span>';
+  } else {
+    const totalDist = path.slice(0,-1).reduce((s,n,i) => s + Math.hypot(path[i+1].x_coor-n.x_coor, path[i+1].y_coor-n.y_coor), 0);
+    resultEl.innerHTML = `<div class="val-item ok">✓ Path found — ${path.length} nodes, ${Math.round(totalDist)}px total distance</div>`;
+    stepsEl.innerHTML = path.map((n,i) => {
+      const d = i > 0 ? Math.round(Math.hypot(n.x_coor-path[i-1].x_coor, n.y_coor-path[i-1].y_coor)) : 0;
+      return `<div class="step hi">${i+1}. <span style="color:${nodeColor(n.type)}">${esc(n.name)}</span>${i>0?` <span style="color:var(--muted2)">+${d}px</span>`:''}</div>`;
+    }).join('') + `<div class="path-cost">Total: ${Math.round(totalDist)} px</div>`;
+    activateRTab('path');
+  }
+  renderNodeList(document.getElementById('nodeSearch').value);
+  draw();
+}
+
+function updatePathSelects() {
+  const names = Array.from(S.nodes.keys()).sort();
+  ['pathSrc','pathDst'].forEach(id => {
+    const sel = document.getElementById(id);
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— select —</option>';
+    names.forEach(n => {
+      const opt = document.createElement('option');
+      opt.value = n; opt.textContent = n;
+      if (n === prev) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  });
+}
+
+document.getElementById('btnFindPath').addEventListener('click', () => {
+  const src = S.nodes.get(document.getElementById('pathSrc').value);
+  const dst = S.nodes.get(document.getElementById('pathDst').value);
+  if (!src || !dst) { toast('Select both source and destination', 'e'); return; }
+  runPath(src, dst);
+});
+document.getElementById('btnClearPath').addEventListener('click', () => {
+  S.pathResult = null;
+  document.getElementById('pathResult').innerHTML = '<div class="empty-note">Run a path to see result here.</div>';
+  document.getElementById('pathSteps').innerHTML = '<span style="color:var(--muted)">No path computed yet.</span>';
+  renderNodeList(document.getElementById('nodeSearch').value);
+  draw();
+});
+
+// ═══════════════════════════════════════════════════════════════
+// VALIDATION
+// ═══════════════════════════════════════════════════════════════
+function validate() {
+  const results = [];
+  const nodes = Array.from(S.nodes.values());
+
+  // 1. Orphaned nodes
+  const orphans = nodes.filter(n => n.neighbors.length === 0);
+  if (orphans.length) {
+    results.push({ type: 'warn', msg: `${orphans.length} orphaned node(s) with no edges: ${orphans.map(n=>n.name).slice(0,5).join(', ')}${orphans.length>5?'…':''}` });
+  } else {
+    results.push({ type: 'ok', msg: 'No orphaned nodes — all nodes have at least one edge' });
+  }
+
+  // 2. Node count
+  results.push({ type: 'ok', msg: `${nodes.length} total nodes (${nodes.filter(n=>n.type==='building').length} buildings, ${nodes.filter(n=>n.type==='walkway').length} walkways, ${nodes.filter(n=>n.type==='gate').length} gates)` });
+
+  // 3. Connectivity (BFS from first node)
+  if (nodes.length > 0) {
+    const visited = new Set();
+    const queue = [nodes[0]];
+    while (queue.length) {
+      const n = queue.shift();
+      if (visited.has(n)) continue;
+      visited.add(n);
+      n.neighbors.forEach(nb => queue.push(nb));
+    }
+    if (visited.size < nodes.length) {
+      const unreachable = nodes.filter(n => !visited.has(n));
+      results.push({ type: 'err', msg: `Graph is DISCONNECTED — ${unreachable.length} node(s) unreachable: ${unreachable.map(n=>n.name).slice(0,5).join(', ')}` });
+    } else {
+      results.push({ type: 'ok', msg: 'Graph is fully connected — all nodes reachable' });
+    }
+  }
+
+  // 4. Asymmetric edges
+  let asymm = 0;
+  for (const n of nodes) {
+    for (const nb of n.neighbors) {
+      if (!nb.neighbors.includes(n)) asymm++;
+    }
+  }
+  if (asymm) {
+    results.push({ type: 'warn', msg: `${asymm} asymmetric edge(s) found (A→B without B→A)` });
+  } else {
+    results.push({ type: 'ok', msg: 'All edges are bidirectional' });
+  }
+
+  // 5. Duplicate names
+  const names = nodes.map(n => n.name);
+  const dups = names.filter((n,i) => names.indexOf(n) !== i);
+  if (dups.length) {
+    results.push({ type: 'err', msg: `Duplicate node names: ${[...new Set(dups)].join(', ')}` });
+  }
+
+  // 6. Nodes at origin
+  const origin = nodes.filter(n => n.x_coor === 0 && n.y_coor === 0);
+  if (origin.length) {
+    results.push({ type: 'warn', msg: `${origin.length} node(s) at (0,0) — may not have coordinates set: ${origin.map(n=>n.name).slice(0,4).join(', ')}` });
+  }
+
+  return results;
+}
+
+document.getElementById('btnValidate').addEventListener('click', runValidation);
+document.getElementById('btnRunValidate').addEventListener('click', runValidation);
+
+function runValidation() {
+  const results = validate();
+  const el = document.getElementById('validationResults');
+  el.innerHTML = results.map(r =>
+    `<div class="val-item ${r.type}"><span>${r.type==='ok'?'✓':r.type==='warn'?'⚠':'✕'}</span><span>${esc(r.msg)}</span></div>`
+  ).join('');
+  activateRTab('valid');
+  const errs = results.filter(r => r.type === 'err').length;
+  const warns = results.filter(r => r.type === 'warn').length;
+  if (errs) toast(`${errs} error(s) found — fix before exporting`, 'e');
+  else if (warns) toast(`${warns} warning(s) — review before exporting`, 'w');
+  else toast('Validation passed ✓', 's');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CODE GENERATOR
+// ═══════════════════════════════════════════════════════════════
+function sanitizeVar(name) {
+  // Create safe JS var name from node name
+  return name.replace(/[^a-zA-Z0-9_]/g, '_').replace(/^(\d)/, '_$1').replace(/_+/g, '_');
+}
+
+function generateCode() {
+  const nodes = Array.from(S.nodes.values());
+  // Build var name map (ensure unique)
+  const varMap = new Map();
+  const usedVars = new Set();
+  for (const n of nodes) {
+    let v = sanitizeVar(n.name);
+    if (v.length > 24) v = v.slice(0, 24);
+    let candidate = v, idx = 2;
+    while (usedVars.has(candidate)) candidate = `${v}${idx++}`;
+    varMap.set(n.name, candidate);
+    usedVars.add(candidate);
+  }
+
+  const lines = [];
+  lines.push('class GraphNode {');
+  lines.push('    constructor(name, type, x_coor, y_coor) {');
+  lines.push('        this.name = name;');
+  lines.push('        this.type = type;');
+  lines.push('        this.neighbors = [];');
+  lines.push('        this.x_coor = x_coor;');
+  lines.push('        this.y_coor = y_coor;');
+  lines.push('    }');
+  lines.push('    addNeighbor(node) {');
+  lines.push('        if (!this.neighbors.includes(node)) this.neighbors.push(node);');
+  lines.push('    }');
+  lines.push('    addBidirectionalNeighbor(node) {');
+  lines.push('        this.addNeighbor(node);');
+  lines.push('        node.addNeighbor(this);');
+  lines.push('    }');
+  lines.push('}');
+  lines.push('');
+  lines.push('class GraphDatabase {');
+  lines.push('    constructor() {');
+  lines.push('        this.graph = new Map();');
+  lines.push('        this.buildGraph();');
+  lines.push('    }');
+  lines.push('');
+  lines.push('    buildGraph() {');
+  lines.push('        // Created Nodes');
+
+  // Group by type for readability
+  const groups = { building: [], gate: [], walkway: [] };
+  for (const n of nodes) {
+    (groups[n.type] || groups.walkway).push(n);
+  }
+
+  for (const [type, grpNodes] of Object.entries(groups)) {
+    if (!grpNodes.length) continue;
+    lines.push(`        // — ${type}s —`);
+    for (const n of grpNodes) {
+      const v = varMap.get(n.name);
+      lines.push(`        const ${v} = new GraphNode(${JSON.stringify(n.name)}, ${JSON.stringify(n.type)}, ${n.x_coor}, ${n.y_coor});`);
+    }
+    lines.push('');
+  }
+
+  lines.push('        // Add to graph');
+  for (const n of nodes) {
+    const v = varMap.get(n.name);
+    lines.push(`        this.graph.set(${JSON.stringify(n.name)}, ${v});`);
+  }
+  lines.push('');
+
+  // Edges — deduplicated, bidirectional where possible
+  lines.push('        // Connections');
+  const edgeDone = new Set();
+  for (const n of nodes) {
+    for (const nb of n.neighbors) {
+      const key = [n.name, nb.name].sort().join('|||');
+      if (edgeDone.has(key)) continue;
+      edgeDone.add(key);
+      const va = varMap.get(n.name), vb = varMap.get(nb.name);
+      // If both have each other, use bidirectional
+      const bidir = nb.neighbors.includes(n);
+      if (bidir) {
+        lines.push(`        ${va}.addBidirectionalNeighbor(${vb});`);
+      } else {
+        lines.push(`        ${va}.addNeighbor(${vb});`);
+      }
+    }
+  }
+
+  lines.push('    }');
+  lines.push('');
+  lines.push('    getgraph() { return this.graph; }');
+  lines.push('    getNode(name) { return this.graph.get(name); }');
+  lines.push('    getAllNodes() { return Array.from(this.graph.values()); }');
+  lines.push('    getAllBuildings() { return Array.from(this.graph.values()).filter(n => n.type === \'building\'); }');
+  lines.push('    getAllWalkways() { return Array.from(this.graph.values()).filter(n => n.type === \'walkway\'); }');
+  lines.push('}');
+  lines.push('');
+  lines.push('export { GraphDatabase };');
+
+  return lines.join('\n');
+}
+
+document.getElementById('btnGenCode').addEventListener('click', () => {
+  S.generatedCode = generateCode();
+  document.getElementById('codeOutput').textContent = S.generatedCode;
+  document.getElementById('btnDlCode').disabled = false;
+  toast('Code generated', 's');
+});
+
+function downloadCode() {
+  if (!S.generatedCode) S.generatedCode = generateCode();
+  const blob = new Blob([S.generatedCode], { type: 'text/javascript' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'graphDatabase.js'; a.click();
+  URL.revokeObjectURL(url);
+  toast('graphDatabase.js downloaded!', 's');
+  log('System', 'graphDatabase.js exported', 'add');
+}
+
+document.getElementById('btnDlCode').addEventListener('click', downloadCode);
+document.getElementById('btnExport').addEventListener('click', downloadCode);
+document.getElementById('btnCopyCode').addEventListener('click', () => {
+  if (!S.generatedCode) S.generatedCode = generateCode();
+  navigator.clipboard.writeText(S.generatedCode).then(() => toast('Code copied', 's'));
+});
+
+// ═══════════════════════════════════════════════════════════════
+// DIFF
+// ═══════════════════════════════════════════════════════════════
+document.getElementById('btnGenDiff').addEventListener('click', () => {
+  if (!S.originalSource) { toast('Load original file first', 'e'); return; }
+  const newCode = generateCode();
+  const oldLines = S.originalSource.split('\n');
+  const newLines = newCode.split('\n');
+  const maxLen = Math.max(oldLines.length, newLines.length);
+  const diffLines = [];
+  let changes = 0;
+  for (let i = 0; i < maxLen; i++) {
+    const o = oldLines[i]; const n = newLines[i];
+    if (o === undefined) { diffLines.push(`<span class="dl-add">+  ${esc(n)}</span>`); changes++; }
+    else if (n === undefined) { diffLines.push(`<span class="dl-rem">-  ${esc(o)}</span>`); changes++; }
+    else if (o !== n) {
+      diffLines.push(`<span class="dl-rem">-  ${esc(o)}</span>`);
+      diffLines.push(`<span class="dl-add">+  ${esc(n)}</span>`);
+      changes++;
+    } else {
+      diffLines.push(`<span class="dl-ctx">   ${esc(o)}</span>`);
+    }
+  }
+  document.getElementById('diffOutput').innerHTML = diffLines.join('\n');
+  toast(`Diff: ${changes} line(s) changed`, 'i');
+});
+document.getElementById('btnCopyDiff').addEventListener('click', () => {
+  const text = document.getElementById('diffOutput').textContent;
+  navigator.clipboard.writeText(text).then(() => toast('Diff copied', 's'));
+});
+
+// ═══════════════════════════════════════════════════════════════
+// CHANGELOG
+// ═══════════════════════════════════════════════════════════════
+function log(name, desc, type = 'mod') {
+  S.changelog.unshift({ name, desc, type, ts: new Date().toLocaleTimeString() });
+  renderLog();
+}
+function renderLog() {
+  const el = document.getElementById('changelogEl');
+  if (!S.changelog.length) { el.innerHTML = '<div class="empty-note">No changes yet.</div>'; return; }
+  el.innerHTML = S.changelog.slice(0, 80).map(c =>
+    `<div class="cl-item ${c.type}">
+      <span class="cl-ts">${c.ts}</span>
+      <strong>${esc(c.name)}</strong> — ${esc(c.desc)}
+    </div>`).join('');
+}
+document.getElementById('btnClearLog').addEventListener('click', () => { S.changelog = []; renderLog(); });
+
+// ═══════════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════════
+function activateRTab(name) {
+  document.querySelectorAll('.rtab').forEach(t => t.classList.toggle('act', t.dataset.rt === name));
+  document.querySelectorAll('.rtab-panel').forEach(p => p.classList.toggle('act', p.id === 'rtp-' + name));
+}
+document.querySelectorAll('.rtab').forEach(tab => {
+  tab.addEventListener('click', () => activateRTab(tab.dataset.rt));
+});
+
+// ═══════════════════════════════════════════════════════════════
+// TOAST
+// ═══════════════════════════════════════════════════════════════
+function toast(msg, type = 'i', ms = 3000) {
+  const el = document.getElementById('toast');
+  const ico = { s: '✅', e: '❌', i: 'ℹ️', w: '⚠️' };
+  el.innerHTML = `<span>${ico[type]||'ℹ️'}</span><span>${msg}</span>`;
+  el.className = `show ${type}`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), ms);
+}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ═══════════════════════════════════════════════════════════════
+// KEYBOARD SHORTCUTS
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  const map = { m:'tMove', M:'tMove', e:'tEdge', E:'tEdge', n:'tAdd', N:'tAdd', p:'tPath', P:'tPath', r:'tRmEdge', R:'tRmEdge' };
+  if (map[e.key]) { document.getElementById(map[e.key]).click(); return; }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && S.activeNode) {
+    deleteNode(S.activeNode);
+  }
+  if (e.key === 'Escape') {
+    S.edgeFrom = null; S.pathFrom = null; S.rmEdgeFrom = null;
+    S.pathResult = null; draw();
+  }
+  if ((e.ctrlKey||e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    downloadCode();
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+resizeCanvas();
+renderLog();
+</script>
+</body>
+</html>

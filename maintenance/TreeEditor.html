@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UTech Tree Editor — Maintenance Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Sora:wght@300;400;600;700&display=swap');
+
+  :root {
+    --bg:       #0a0c14;
+    --surface:  #10141f;
+    --panel:    #161b2a;
+    --border:   #1e2840;
+    --border2:  #2a3556;
+    --blue:     #0E004E;
+    --gold:     #FFD201;
+    --gold2:    #e6be00;
+    --accent:   #4f80ff;
+    --accent2:  #7ba4ff;
+    --red:      #ff4f4f;
+    --green:    #3ddc84;
+    --text:     #e8ecf4;
+    --muted:    #6b7a9e;
+    --building: #FFD201;
+    --floor:    #4f80ff;
+    --room:     #3ddc84;
+    --radius:   10px;
+    --transition: 0.18s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, #0E004E 0%, #1a006e 60%, #0e0030 100%);
+    border-bottom: 2px solid var(--gold);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 4px 32px #0006;
+  }
+
+  .logo-badge {
+    background: var(--gold);
+    color: #0E004E;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 0.78rem;
+    padding: 5px 11px;
+    border-radius: 6px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  header h1 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.01em;
+  }
+
+  header p {
+    font-size: 0.78rem;
+    color: rgba(255,255,255,0.55);
+    margin-top: 1px;
+  }
+
+  .header-right {
+    margin-left: auto;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    font-family: 'Sora', sans-serif;
+    font-size: 0.83rem;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 7px;
+    border: none;
+    cursor: pointer;
+    transition: all var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    white-space: nowrap;
+    letter-spacing: 0.01em;
+  }
+
+  .btn-gold {
+    background: var(--gold);
+    color: #0E004E;
+  }
+  .btn-gold:hover { background: #ffe84d; transform: translateY(-1px); box-shadow: 0 4px 14px #FFD20155; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--gold);
+    border: 1.5px solid var(--gold);
+  }
+  .btn-outline:hover { background: #FFD20115; }
+
+  .btn-accent {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-accent:hover { background: var(--accent2); transform: translateY(-1px); }
+
+  .btn-red {
+    background: transparent;
+    color: var(--red);
+    border: 1.5px solid var(--red);
+    font-size: 0.75rem;
+    padding: 4px 10px;
+  }
+  .btn-red:hover { background: #ff4f4f22; }
+
+  .btn-green {
+    background: var(--green);
+    color: #0a1a10;
+    font-weight: 700;
+  }
+  .btn-green:hover { background: #56ffa0; transform: translateY(-1px); box-shadow: 0 4px 14px #3ddc8455; }
+
+  .btn-sm {
+    font-size: 0.75rem;
+    padding: 5px 12px;
+  }
+
+  /* ── Layout ── */
+  .app {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 0;
+    height: calc(100vh - 72px);
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    padding: 18px 20px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sidebar-header h2 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .stats-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .stat-chip {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-radius: 20px;
+    padding: 3px 11px;
+    font-size: 0.72rem;
+    font-family: 'JetBrains Mono', monospace;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .dot-building { background: var(--building); }
+  .dot-floor    { background: var(--floor); }
+  .dot-room     { background: var(--room); }
+
+  .search-box {
+    position: relative;
+  }
+  .search-box input {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-radius: 7px;
+    padding: 8px 12px 8px 34px;
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.82rem;
+    outline: none;
+    transition: border-color var(--transition);
+  }
+  .search-box input:focus { border-color: var(--gold); }
+  .search-box::before {
+    content: '⌕';
+    position: absolute;
+    left: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-size: 1rem;
+    pointer-events: none;
+  }
+
+  /* ── Tree View ── */
+  .tree-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0 16px;
+  }
+  .tree-scroll::-webkit-scrollbar { width: 5px; }
+  .tree-scroll::-webkit-scrollbar-track { background: transparent; }
+  .tree-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  .tree-empty {
+    text-align: center;
+    padding: 48px 24px;
+    color: var(--muted);
+    font-size: 0.85rem;
+    line-height: 1.8;
+  }
+  .tree-empty .icon { font-size: 2.5rem; display: block; margin-bottom: 12px; }
+
+  /* Building node */
+  .building-node {
+    margin: 4px 12px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    transition: border-color var(--transition);
+  }
+  .building-node.expanded { border-color: #FFD20133; }
+
+  .node-header {
+    display: flex;
+    align-items: center;
+    padding: 9px 12px;
+    cursor: pointer;
+    transition: background var(--transition);
+    user-select: none;
+    gap: 8px;
+  }
+  .building-node > .node-header { background: #1a1330; }
+  .building-node > .node-header:hover { background: #1f1840; }
+
+  .node-toggle {
+    font-size: 0.65rem;
+    color: var(--muted);
+    transition: transform var(--transition);
+    width: 12px;
+    flex-shrink: 0;
+  }
+  .expanded > .node-header .node-toggle { transform: rotate(90deg); }
+
+  .node-tag {
+    font-size: 0.62rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    text-transform: uppercase;
+  }
+  .tag-building { background: #FFD20120; color: var(--gold); border: 1px solid #FFD20140; }
+  .tag-floor    { background: #4f80ff20; color: var(--accent2); border: 1px solid #4f80ff40; }
+  .tag-room     { background: #3ddc8420; color: var(--green); border: 1px solid #3ddc8440; }
+
+  .node-name {
+    font-size: 0.82rem;
+    font-weight: 600;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .node-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity var(--transition);
+  }
+  .node-header:hover .node-actions { opacity: 1; }
+
+  .icon-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: all var(--transition);
+    line-height: 1;
+  }
+  .icon-btn:hover { color: var(--text); background: var(--border2); }
+  .icon-btn.del:hover { color: var(--red); }
+
+  /* Floor children */
+  .floor-list {
+    display: none;
+    background: #0d1020;
+    padding: 4px 0 4px 16px;
+  }
+  .building-node.expanded > .floor-list { display: block; }
+
+  .floor-node {
+    margin: 3px 8px 3px 0;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid transparent;
+    transition: border-color var(--transition);
+  }
+  .floor-node.expanded { border-color: #4f80ff33; }
+
+  .floor-node > .node-header {
+    background: #0f1525;
+    padding: 7px 10px;
+  }
+  .floor-node > .node-header:hover { background: #141c30; }
+
+  /* Room list */
+  .room-list {
+    display: none;
+    padding: 2px 0 4px 20px;
+    background: #090d18;
+  }
+  .floor-node.expanded > .room-list { display: block; }
+
+  .room-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px 4px 4px;
+    border-radius: 5px;
+    transition: background var(--transition);
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
+  .room-item:hover { background: #ffffff08; color: var(--text); }
+  .room-item:hover .node-actions { opacity: 1; }
+
+  .room-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--room); flex-shrink: 0; }
+  .room-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
+
+  /* ── Main Panel ── */
+  .main-panel {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  /* ── Tab Bar ── */
+  .tab-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    padding: 0 24px;
+    gap: 2px;
+  }
+
+  .tab {
+    padding: 14px 20px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all var(--transition);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+  .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+  .tab:hover:not(.active) { color: var(--text); }
+
+  /* ── Panel Content ── */
+  .panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 32px;
+  }
+  .panel-content::-webkit-scrollbar { width: 6px; }
+  .panel-content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Forms ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .form-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+  .full { grid-column: 1 / -1; }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  label {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+
+  input[type="text"], select, textarea {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-radius: 7px;
+    padding: 9px 13px;
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color var(--transition), box-shadow var(--transition);
+    width: 100%;
+  }
+  input[type="text"]:focus, select:focus, textarea:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px #FFD20118;
+  }
+  select { cursor: pointer; }
+  textarea { resize: vertical; min-height: 80px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+
+  .hint { font-size: 0.72rem; color: var(--muted); }
+
+  /* ── Section headers ── */
+  .section-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, var(--border2), transparent);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 24px;
+    margin-bottom: 22px;
+  }
+  .card h3 {
+    font-size: 0.88rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  /* ── Code output ── */
+  .code-area {
+    background: #06080f;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: #c8d3f5;
+    overflow: auto;
+    max-height: 480px;
+    white-space: pre;
+    line-height: 1.65;
+  }
+  .code-area::-webkit-scrollbar { width: 6px; height: 6px; }
+  .code-area::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* ── Upload area ── */
+  .upload-area {
+    border: 2px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 36px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition);
+    position: relative;
+    margin-bottom: 16px;
+  }
+  .upload-area:hover, .upload-area.dragover {
+    border-color: var(--gold);
+    background: #FFD20108;
+  }
+  .upload-area input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+  .upload-icon { font-size: 2rem; display: block; margin-bottom: 10px; }
+  .upload-area p { color: var(--muted); font-size: 0.85rem; }
+  .upload-area strong { color: var(--gold); }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 14px 20px;
+    font-size: 0.83rem;
+    box-shadow: 0 8px 32px #0008;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    z-index: 999;
+    max-width: 340px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+  #toast.success { border-color: var(--green); }
+  #toast.error   { border-color: var(--red); }
+  #toast.info    { border-color: var(--accent); }
+
+  /* ── Change log ── */
+  .change-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: var(--panel);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 0.8rem;
+    border-left: 3px solid var(--accent);
+  }
+  .change-item.added { border-color: var(--green); }
+  .change-item.removed { border-color: var(--red); }
+
+  /* ── Bulk textarea ── */
+  .bulk-help {
+    background: var(--panel);
+    border-radius: 7px;
+    padding: 12px 16px;
+    font-size: 0.77rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-bottom: 12px;
+    border-left: 3px solid var(--accent);
+    line-height: 1.8;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .app { grid-template-columns: 1fr; height: auto; }
+    .sidebar { height: 45vh; border-right: none; border-bottom: 1px solid var(--border); }
+    .panel-content { padding: 20px 16px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid.cols3 { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* Diff highlight in code */
+  .added-line { color: #3ddc84; }
+  .removed-line { color: #ff4f4f; }
+
+  .empty-hint {
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-style: italic;
+    padding: 10px 0;
+  }
+
+  select option { background: var(--panel); }
+
+  /* Floor count badge */
+  .count-badge {
+    font-size: 0.65rem;
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--border2);
+    color: var(--muted);
+    padding: 1px 6px;
+    border-radius: 10px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-badge">UTech</div>
+  <div>
+    <h1>Tree Editor — Maintenance Dashboard</h1>
+    <p>Buildings · Floors · Rooms for <code style="color:var(--gold);font-size:0.75rem">treeDataStruct.js</code></p>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-outline btn-sm" id="btnClearAll">✕ Clear All</button>
+    <button class="btn btn-gold" id="btnDownload" disabled>⬇ Download JS</button>
+  </div>
+</header>
+
+<div class="app">
+  <!-- ── Sidebar: Live Tree ── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>🌳 Live Tree</h2>
+      <div class="stats-row" id="statsRow">
+        <div class="stat-chip"><span class="dot dot-building"></span><span id="cntBuilding">0</span> buildings</div>
+        <div class="stat-chip"><span class="dot dot-floor"></span><span id="cntFloor">0</span> floors</div>
+        <div class="stat-chip"><span class="dot dot-room"></span><span id="cntRoom">0</span> rooms</div>
+      </div>
+      <div class="search-box">
+        <input type="text" id="treeSearch" placeholder="Search nodes…">
+      </div>
+    </div>
+    <div class="tree-scroll" id="treeView">
+      <div class="tree-empty">
+        <span class="icon">📂</span>
+        Load a <strong>treeDataStruct.js</strong> file<br>or add nodes manually<br>to get started.
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main Panel ── -->
+  <div class="main-panel">
+    <div class="tab-bar">
+      <div class="tab active" data-tab="load">📥 Load File</div>
+      <div class="tab" data-tab="add">➕ Add Nodes</div>
+      <div class="tab" data-tab="bulk">📋 Bulk Add</div>
+      <div class="tab" data-tab="export">📤 Export</div>
+      <div class="tab" data-tab="changes">📝 Changes</div>
+    </div>
+
+    <div class="panel-content">
+
+      <!-- ── LOAD TAB ── -->
+      <div class="tab-panel active" id="tab-load">
+        <div class="section-title">Load Existing File</div>
+        <div class="card">
+          <h3>📂 Upload treeDataStruct.js</h3>
+          <div class="upload-area" id="uploadArea">
+            <input type="file" id="fileInput" accept=".js">
+            <span class="upload-icon">📄</span>
+            <p><strong>Click or drag & drop</strong> your treeDataStruct.js here</p>
+            <p style="margin-top:6px;font-size:0.75rem">The file will be parsed and loaded into the editor</p>
+          </div>
+          <p id="loadStatus" class="hint"></p>
+        </div>
+
+        <div class="card">
+          <h3>⌨️ Paste Code (fallback)</h3>
+          <textarea id="pasteArea" rows="10" placeholder="Paste the full contents of treeDataStruct.js here, then click Parse…"></textarea>
+          <div class="form-actions">
+            <button class="btn btn-accent" id="btnParse">⚡ Parse & Load</button>
+            <span class="hint" id="parseStatus"></span>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>🆕 Start Fresh</h3>
+          <p class="hint" style="margin-bottom:14px">Begin with an empty tree and add everything manually.</p>
+          <button class="btn btn-outline" id="btnFresh">Start with Empty Tree</button>
+        </div>
+      </div>
+
+      <!-- ── ADD NODES TAB ── -->
+      <div class="tab-panel" id="tab-add">
+        <div class="section-title">Add Building</div>
+        <div class="card">
+          <h3>🏛️ New Building</h3>
+          <div class="form-grid">
+            <div class="field full">
+              <label>Building Full Name <span style="color:var(--red)">*</span></label>
+              <input type="text" id="bldName" placeholder="e.g., Faculty of Health Sciences">
+            </div>
+            <div class="field">
+              <label>HashMap Key (auto)</label>
+              <input type="text" id="bldKey" placeholder="AUTO-GENERATED" readonly style="color:var(--muted)">
+            </div>
+            <div class="field">
+              <label>Building Picture Path</label>
+              <input type="text" id="bldPic" placeholder="assets/buildings/FOHS.webp">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-gold" id="btnAddBuilding">+ Add Building</button>
+          </div>
+        </div>
+
+        <div class="section-title">Add Floor</div>
+        <div class="card">
+          <h3>📐 New Floor</h3>
+          <div class="form-grid">
+            <div class="field">
+              <label>Parent Building <span style="color:var(--red)">*</span></label>
+              <select id="floorBuilding">
+                <option value="">— select building —</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Floor Display Name <span style="color:var(--red)">*</span></label>
+              <input type="text" id="floorName" placeholder="e.g., FOHS GROUND">
+            </div>
+            <div class="field full">
+              <label>Floor Picture Path</label>
+              <input type="text" id="floorPic" placeholder="assets/floors/FOHS_GROUND.webp">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-gold" id="btnAddFloor">+ Add Floor</button>
+          </div>
+        </div>
+
+        <div class="section-title">Add Room(s)</div>
+        <div class="card">
+          <h3>🚪 New Room</h3>
+          <div class="form-grid">
+            <div class="field">
+              <label>Parent Building <span style="color:var(--red)">*</span></label>
+              <select id="roomBuilding">
+                <option value="">— select building —</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Parent Floor <span style="color:var(--red)">*</span></label>
+              <select id="roomFloor">
+                <option value="">— select floor —</option>
+              </select>
+            </div>
+            <div class="field full">
+              <label>Room Name(s) — separate multiple with commas</label>
+              <input type="text" id="roomNames" placeholder="e.g., 3A1, 3A2, 3A3, Administration">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn-gold" id="btnAddRoom">+ Add Room(s)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── BULK ADD TAB ── -->
+      <div class="tab-panel" id="tab-bulk">
+        <div class="section-title">Bulk Add via CSV</div>
+        <div class="card">
+          <h3>📋 Paste CSV Data</h3>
+          <div class="bulk-help">
+            Format: <strong>BUILDING_NAME, FLOOR_NAME, ROOM_NAME</strong><br>
+            — One entry per line.<br>
+            — Leave ROOM_NAME blank to add a floor only.<br>
+            — Leave FLOOR_NAME and ROOM_NAME blank to add a building only.<br>
+            <br>
+            Example:<br>
+            Faculty of Health Sciences, FOHS GROUND, 3A1<br>
+            Faculty of Health Sciences, FOHS GROUND, 3A2<br>
+            Faculty of Health Sciences, FOHS 1, 3B1<br>
+            College of Business and Management,,<br>
+          </div>
+          <textarea id="bulkArea" rows="14" placeholder="Paste your CSV data here…&#10;BUILDING, FLOOR, ROOM&#10;Faculty of Health Sciences, FOHS GROUND, 3A1&#10;Faculty of Health Sciences, FOHS GROUND, 3A2"></textarea>
+          <div class="form-actions">
+            <button class="btn btn-accent" id="btnBulkPreview">👁 Preview</button>
+            <button class="btn btn-gold" id="btnBulkImport" disabled>⚡ Import All</button>
+            <span class="hint" id="bulkStatus"></span>
+          </div>
+          <div id="bulkPreviewArea" style="margin-top:14px"></div>
+        </div>
+      </div>
+
+      <!-- ── EXPORT TAB ── -->
+      <div class="tab-panel" id="tab-export">
+        <div class="section-title">Generated Code</div>
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+          <button class="btn btn-gold" id="btnGenerate">⚡ Generate Code</button>
+          <button class="btn btn-green" id="btnDownload2" disabled>⬇ Download treeDataStruct.js</button>
+          <button class="btn btn-outline btn-sm" id="btnCopyCode">📋 Copy</button>
+        </div>
+        <pre class="code-area" id="codeOutput">// Click "Generate Code" to see the output…</pre>
+      </div>
+
+      <!-- ── CHANGES TAB ── -->
+      <div class="tab-panel" id="tab-changes">
+        <div class="section-title">Change Log</div>
+        <div id="changeLog">
+          <p class="empty-hint">No changes yet. Load a file or add nodes to begin.</p>
+        </div>
+        <div style="margin-top:20px">
+          <button class="btn btn-red btn-sm" id="btnClearLog">Clear Log</button>
+        </div>
+      </div>
+
+    </div><!-- /panel-content -->
+  </div><!-- /main-panel -->
+</div><!-- /app -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════
+const state = {
+  buildings: [], // [{ name, key, picture, floors: [{ name, picture, rooms: [string] }] }]
+  changes: [],
+  originalCode: ''
+};
+
+// ═══════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════
+function toKey(str) { return str.trim().toUpperCase(); }
+
+function toast(msg, type='info', duration=3200) {
+  const el = document.getElementById('toast');
+  const icons = { success:'✅', error:'❌', info:'ℹ️' };
+  el.textContent = '';
+  el.innerHTML = `<span>${icons[type]||'ℹ️'}</span> <span>${msg}</span>`;
+  el.className = `show ${type}`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), duration);
+}
+
+function logChange(type, msg) {
+  state.changes.push({ type, msg, ts: new Date().toLocaleTimeString() });
+  renderChangeLog();
+}
+
+function getBuildingByName(name) {
+  return state.buildings.find(b => b.name === name);
+}
+
+function getFloorsByBuilding(buildingName) {
+  const b = getBuildingByName(buildingName);
+  return b ? b.floors : [];
+}
+
+function hasDuplicate(arr, key, val) {
+  return arr.some(x => toKey(x[key]||x) === toKey(val));
+}
+
+// ═══════════════════════════════════════════════
+//  PARSER — extracts buildings/floors/rooms from JS source
+// ═══════════════════════════════════════════════
+function parseTreeDataStruct(code) {
+  state.originalCode = code;
+  const buildings = [];
+
+  // Find all building nodes: new Node('...', this.root, 'building')
+  const bldRE = /new Node\((['"`])(.*?)\1\s*,\s*this\.root\s*,\s*['"`]building['"`]\)/g;
+  let bm;
+  while ((bm = bldRE.exec(code)) !== null) {
+    const name = bm[2];
+    buildings.push({ name, key: toKey(name), picture: '', floors: [] });
+  }
+
+  // For each building, find its floor nodes
+  for (const bld of buildings) {
+    // Floors: new Node('...', VARNAME, 'floor') where VARNAME relates to the building
+    // We look for the block after the building declaration
+    const bldVarRE = new RegExp(
+      `const\\s+(\\w+)\\s*=\\s*new\\s+Node\\((['"\`])${escapeRE(bld.name)}\\2`,
+      'g'
+    );
+    const bldVarMatch = bldVarRE.exec(code);
+    if (!bldVarMatch) continue;
+    const bldVar = bldVarMatch[1];
+
+    // Find all floor nodes with this building as parent
+    const floorRE = new RegExp(
+      `const\\s+(\\w+)\\s*=\\s*new\\s+Node\\((['"\`])(.*?)\\2\\s*,\\s*${bldVar}\\s*,\\s*['"\`]floor['"\`]\\)`,
+      'g'
+    );
+    let fm;
+    while ((fm = floorRE.exec(code)) !== null) {
+      const floorVar = fm[1];
+      const floorName = fm[3];
+      const floor = { name: floorName, picture: '', rooms: [] };
+
+      // Find room arrays for this floor
+      const roomsArrRE = new RegExp(
+        `const\\s+${floorVar}_ROOMS\\s*=\\s*\\[([\\s\\S]*?)\\];`,
+        'g'
+      );
+      const ra = roomsArrRE.exec(code);
+      if (ra) {
+        const arrText = ra[1];
+        // Each entry like ['roomName'] or ["roomName"]
+        const entryRE = /\[(['"`])(.*?)\1\]/g;
+        let em;
+        while ((em = entryRE.exec(arrText)) !== null) {
+          floor.rooms.push(em[2]);
+        }
+      }
+      bld.floors.push(floor);
+    }
+  }
+
+  // Extract picture paths from getFloorPicture / getBuildingPicture stubs if any
+  // (best-effort; users can set paths manually)
+  const picRE = /['"`](FENC|SCIT|FELS|COBAM|SOBA|SHARED|FOBE)[^'"`]*\.webp['"`]/g;
+
+  return buildings;
+}
+
+function escapeRE(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// ═══════════════════════════════════════════════
+//  RENDER TREE
+// ═══════════════════════════════════════════════
+function renderTree(filter='') {
+  const container = document.getElementById('treeView');
+  const q = filter.toLowerCase();
+
+  if (state.buildings.length === 0) {
+    container.innerHTML = `<div class="tree-empty"><span class="icon">📂</span>Load a <strong>treeDataStruct.js</strong> file<br>or add nodes manually<br>to get started.</div>`;
+    return;
+  }
+
+  let html = '';
+  for (const bld of state.buildings) {
+    const bldMatch = !q || bld.name.toLowerCase().includes(q);
+    let floorsHtml = '';
+    let anyFloorMatch = false;
+
+    for (const floor of bld.floors) {
+      const floorMatch = !q || floor.name.toLowerCase().includes(q);
+      let roomsHtml = '';
+      let anyRoomMatch = false;
+
+      for (const room of floor.rooms) {
+        if (q && !room.toLowerCase().includes(q) && !floorMatch && !bldMatch) continue;
+        anyRoomMatch = true;
+        roomsHtml += `
+          <div class="room-item">
+            <span class="room-dot"></span>
+            <span class="room-name">${esc(room)}</span>
+            <div class="node-actions">
+              <button class="icon-btn del" title="Delete room" onclick="deleteRoom(${JSON.stringify(bld.name)},${JSON.stringify(floor.name)},${JSON.stringify(room)})">🗑</button>
+            </div>
+          </div>`;
+      }
+
+      if (!floorMatch && !anyRoomMatch && q) continue;
+      anyFloorMatch = true;
+      floorsHtml += `
+        <div class="floor-node" id="fn-${eid(floor.name)}">
+          <div class="node-header" onclick="toggleNode(this.parentElement,'fn-${eid(floor.name)}')">
+            <span class="node-toggle">▶</span>
+            <span class="node-tag tag-floor">floor</span>
+            <span class="node-name">${esc(floor.name)}</span>
+            <span class="count-badge">${floor.rooms.length}r</span>
+            <div class="node-actions">
+              <button class="icon-btn del" title="Delete floor" onclick="deleteFloor(${JSON.stringify(bld.name)},${JSON.stringify(floor.name)})">🗑</button>
+            </div>
+          </div>
+          <div class="room-list">${roomsHtml || '<div class="empty-hint" style="padding:6px 8px">No rooms</div>'}</div>
+        </div>`;
+    }
+
+    if (!bldMatch && !anyFloorMatch && q) continue;
+    html += `
+      <div class="building-node" id="bn-${eid(bld.name)}">
+        <div class="node-header" onclick="toggleNode(this.parentElement,'bn-${eid(bld.name)}')">
+          <span class="node-toggle">▶</span>
+          <span class="node-tag tag-building">bldg</span>
+          <span class="node-name">${esc(bld.name)}</span>
+          <span class="count-badge">${bld.floors.length}f</span>
+          <div class="node-actions">
+            <button class="icon-btn del" title="Delete building" onclick="deleteBuilding(${JSON.stringify(bld.name)})">🗑</button>
+          </div>
+        </div>
+        <div class="floor-list">${floorsHtml || '<div class="empty-hint" style="padding:6px 8px 6px 12px">No floors</div>'}</div>
+      </div>`;
+  }
+
+  container.innerHTML = html;
+  updateStats();
+  updateSelects();
+  updateDownloadBtn();
+}
+
+function toggleNode(el) {
+  el.classList.toggle('expanded');
+}
+
+function eid(s) { return s.replace(/[^a-z0-9]/gi, '_'); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function updateStats() {
+  let floors = 0, rooms = 0;
+  for (const b of state.buildings) {
+    floors += b.floors.length;
+    for (const f of b.floors) rooms += f.rooms.length;
+  }
+  document.getElementById('cntBuilding').textContent = state.buildings.length;
+  document.getElementById('cntFloor').textContent = floors;
+  document.getElementById('cntRoom').textContent = rooms;
+}
+
+function updateDownloadBtn() {
+  const has = state.buildings.length > 0;
+  document.getElementById('btnDownload').disabled = !has;
+  document.getElementById('btnDownload2').disabled = !has;
+}
+
+// ═══════════════════════════════════════════════
+//  SELECT POPULATION
+// ═══════════════════════════════════════════════
+function updateSelects() {
+  const bldNames = state.buildings.map(b => b.name);
+
+  ['floorBuilding', 'roomBuilding'].forEach(id => {
+    const sel = document.getElementById(id);
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— select building —</option>';
+    bldNames.forEach(n => {
+      const opt = document.createElement('option');
+      opt.value = n; opt.textContent = n;
+      if (n === prev) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  });
+
+  // Update room-floor select
+  const rb = document.getElementById('roomBuilding').value;
+  updateFloorSelect(rb);
+}
+
+function updateFloorSelect(buildingName) {
+  const sel = document.getElementById('roomFloor');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">— select floor —</option>';
+  if (!buildingName) return;
+  const b = getBuildingByName(buildingName);
+  if (!b) return;
+  b.floors.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.name; opt.textContent = f.name;
+    if (f.name === prev) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+document.getElementById('roomBuilding').addEventListener('change', e => updateFloorSelect(e.target.value));
+
+// ═══════════════════════════════════════════════
+//  ADD BUILDING
+// ═══════════════════════════════════════════════
+document.getElementById('bldName').addEventListener('input', e => {
+  document.getElementById('bldKey').value = toKey(e.target.value);
+});
+
+document.getElementById('btnAddBuilding').addEventListener('click', () => {
+  const name = document.getElementById('bldName').value.trim();
+  const pic  = document.getElementById('bldPic').value.trim();
+  if (!name) { toast('Building name is required', 'error'); return; }
+  if (getBuildingByName(name)) { toast(`Building "${name}" already exists`, 'error'); return; }
+  state.buildings.push({ name, key: toKey(name), picture: pic, floors: [] });
+  logChange('added', `Building: ${name}`);
+  document.getElementById('bldName').value = '';
+  document.getElementById('bldKey').value = '';
+  document.getElementById('bldPic').value = '';
+  renderTree(document.getElementById('treeSearch').value);
+  toast(`Building "${name}" added`, 'success');
+});
+
+// ═══════════════════════════════════════════════
+//  ADD FLOOR
+// ═══════════════════════════════════════════════
+document.getElementById('btnAddFloor').addEventListener('click', () => {
+  const bldName   = document.getElementById('floorBuilding').value;
+  const floorName = document.getElementById('floorName').value.trim();
+  const pic       = document.getElementById('floorPic').value.trim();
+  if (!bldName)   { toast('Select a parent building', 'error'); return; }
+  if (!floorName) { toast('Floor name is required', 'error'); return; }
+  const bld = getBuildingByName(bldName);
+  if (!bld) { toast('Building not found', 'error'); return; }
+  if (bld.floors.some(f => f.name === floorName)) { toast(`Floor "${floorName}" already exists in this building`, 'error'); return; }
+  bld.floors.push({ name: floorName, picture: pic, rooms: [] });
+  logChange('added', `Floor: ${floorName} → ${bldName}`);
+  document.getElementById('floorName').value = '';
+  document.getElementById('floorPic').value = '';
+  renderTree(document.getElementById('treeSearch').value);
+  updateFloorSelect(document.getElementById('roomBuilding').value);
+  toast(`Floor "${floorName}" added to ${bldName}`, 'success');
+});
+
+// ═══════════════════════════════════════════════
+//  ADD ROOM
+// ═══════════════════════════════════════════════
+document.getElementById('btnAddRoom').addEventListener('click', () => {
+  const bldName   = document.getElementById('roomBuilding').value;
+  const floorName = document.getElementById('roomFloor').value;
+  const rawNames  = document.getElementById('roomNames').value;
+  if (!bldName)   { toast('Select a parent building', 'error'); return; }
+  if (!floorName) { toast('Select a parent floor', 'error'); return; }
+  if (!rawNames.trim()) { toast('Enter at least one room name', 'error'); return; }
+
+  const bld   = getBuildingByName(bldName);
+  const floor = bld ? bld.floors.find(f => f.name === floorName) : null;
+  if (!floor) { toast('Floor not found', 'error'); return; }
+
+  const names = rawNames.split(',').map(s => s.trim()).filter(Boolean);
+  let added = 0;
+  names.forEach(rn => {
+    if (floor.rooms.some(r => r.toUpperCase() === rn.toUpperCase())) return;
+    floor.rooms.push(rn);
+    logChange('added', `Room: ${rn} → ${floorName} → ${bldName}`);
+    added++;
+  });
+  document.getElementById('roomNames').value = '';
+  renderTree(document.getElementById('treeSearch').value);
+  toast(`${added} room(s) added to ${floorName}`, 'success');
+});
+
+// ═══════════════════════════════════════════════
+//  DELETE NODES
+// ═══════════════════════════════════════════════
+function deleteBuilding(name) {
+  if (!confirm(`Delete building "${name}" and ALL its floors/rooms?`)) return;
+  const idx = state.buildings.findIndex(b => b.name === name);
+  if (idx > -1) {
+    state.buildings.splice(idx, 1);
+    logChange('removed', `Building: ${name}`);
+    renderTree(document.getElementById('treeSearch').value);
+    toast(`Building "${name}" deleted`, 'error');
+  }
+}
+
+function deleteFloor(bldName, floorName) {
+  if (!confirm(`Delete floor "${floorName}" and all its rooms?`)) return;
+  const bld = getBuildingByName(bldName);
+  if (!bld) return;
+  const idx = bld.floors.findIndex(f => f.name === floorName);
+  if (idx > -1) {
+    bld.floors.splice(idx, 1);
+    logChange('removed', `Floor: ${floorName} from ${bldName}`);
+    renderTree(document.getElementById('treeSearch').value);
+    toast(`Floor "${floorName}" deleted`, 'error');
+  }
+}
+
+function deleteRoom(bldName, floorName, roomName) {
+  const bld   = getBuildingByName(bldName);
+  const floor = bld ? bld.floors.find(f => f.name === floorName) : null;
+  if (!floor) return;
+  const idx = floor.rooms.findIndex(r => r === roomName);
+  if (idx > -1) {
+    floor.rooms.splice(idx, 1);
+    logChange('removed', `Room: ${roomName} from ${floorName}`);
+    renderTree(document.getElementById('treeSearch').value);
+    toast(`Room "${roomName}" deleted`, 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  SEARCH
+// ═══════════════════════════════════════════════
+document.getElementById('treeSearch').addEventListener('input', e => {
+  renderTree(e.target.value);
+});
+
+// ═══════════════════════════════════════════════
+//  TABS
+// ═══════════════════════════════════════════════
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ═══════════════════════════════════════════════
+//  FILE LOAD
+// ═══════════════════════════════════════════════
+document.getElementById('fileInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    loadFromCode(ev.target.result, file.name);
+  };
+  reader.readAsText(file);
+});
+
+// Drag and drop
+const uploadArea = document.getElementById('uploadArea');
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadArea.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.js')) {
+    const reader = new FileReader();
+    reader.onload = ev => loadFromCode(ev.target.result, file.name);
+    reader.readAsText(file);
+  } else {
+    toast('Please drop a .js file', 'error');
+  }
+});
+
+document.getElementById('btnParse').addEventListener('click', () => {
+  const code = document.getElementById('pasteArea').value.trim();
+  if (!code) { toast('Paste some code first', 'error'); return; }
+  loadFromCode(code, 'pasted code');
+});
+
+function loadFromCode(code, sourceName) {
+  try {
+    const parsed = parseTreeDataStruct(code);
+    state.buildings = parsed;
+    logChange('added', `Loaded ${parsed.length} buildings from ${sourceName}`);
+    renderTree();
+    toast(`Loaded ${parsed.length} buildings from ${sourceName}`, 'success');
+    document.getElementById('loadStatus').textContent = `✅ ${parsed.length} buildings parsed from ${sourceName}`;
+    // Switch to Add tab
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelector('[data-tab="add"]').classList.add('active');
+    document.getElementById('tab-add').classList.add('active');
+  } catch(err) {
+    toast('Parse error: ' + err.message, 'error');
+    document.getElementById('parseStatus').textContent = '❌ ' + err.message;
+  }
+}
+
+document.getElementById('btnFresh').addEventListener('click', () => {
+  state.buildings = [];
+  state.changes = [];
+  state.originalCode = '';
+  renderTree();
+  toast('Started with a fresh empty tree', 'info');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-tab="add"]').classList.add('active');
+  document.getElementById('tab-add').classList.add('active');
+});
+
+// ═══════════════════════════════════════════════
+//  BULK ADD
+// ═══════════════════════════════════════════════
+let bulkParsed = [];
+
+document.getElementById('btnBulkPreview').addEventListener('click', () => {
+  const raw = document.getElementById('bulkArea').value.trim();
+  if (!raw) { toast('Paste CSV data first', 'error'); return; }
+  bulkParsed = [];
+  const errors = [];
+  const lines = raw.split('\n');
+  lines.forEach((line, i) => {
+    if (!line.trim() || line.trim().startsWith('//') || line.trim().toUpperCase().startsWith('BUILDING')) return;
+    const parts = line.split(',').map(s => s.trim());
+    const bld = parts[0] || '';
+    const flr = parts[1] || '';
+    const rm  = parts[2] || '';
+    if (!bld) { errors.push(`Line ${i+1}: missing building name`); return; }
+    bulkParsed.push({ bld, flr, rm });
+  });
+
+  if (errors.length) {
+    toast(errors[0], 'error');
+  }
+
+  let previewHtml = '';
+  bulkParsed.forEach(r => {
+    previewHtml += `<div class="change-item added">
+      🏛 <b>${esc(r.bld)}</b>${r.flr ? ` › 📐 <b>${esc(r.flr)}</b>` : ''}${r.rm ? ` › 🚪 ${esc(r.rm)}` : ''}
+    </div>`;
+  });
+  document.getElementById('bulkPreviewArea').innerHTML = previewHtml || '<p class="empty-hint">Nothing to preview</p>';
+  document.getElementById('btnBulkImport').disabled = bulkParsed.length === 0;
+  document.getElementById('bulkStatus').textContent = `${bulkParsed.length} rows parsed`;
+  toast(`Previewing ${bulkParsed.length} rows`, 'info');
+});
+
+document.getElementById('btnBulkImport').addEventListener('click', () => {
+  let bAdded=0, fAdded=0, rAdded=0;
+  bulkParsed.forEach(r => {
+    // Ensure building exists
+    let bld = getBuildingByName(r.bld);
+    if (!bld) {
+      bld = { name: r.bld, key: toKey(r.bld), picture: '', floors: [] };
+      state.buildings.push(bld);
+      bAdded++;
+      logChange('added', `Building: ${r.bld}`);
+    }
+    if (!r.flr) return;
+    // Ensure floor exists
+    let floor = bld.floors.find(f => f.name === r.flr);
+    if (!floor) {
+      floor = { name: r.flr, picture: '', rooms: [] };
+      bld.floors.push(floor);
+      fAdded++;
+      logChange('added', `Floor: ${r.flr} → ${r.bld}`);
+    }
+    if (!r.rm) return;
+    // Add room
+    if (!floor.rooms.some(x => x.toUpperCase() === r.rm.toUpperCase())) {
+      floor.rooms.push(r.rm);
+      rAdded++;
+      logChange('added', `Room: ${r.rm} → ${r.flr}`);
+    }
+  });
+  renderTree(document.getElementById('treeSearch').value);
+  document.getElementById('bulkArea').value = '';
+  document.getElementById('bulkPreviewArea').innerHTML = '';
+  document.getElementById('btnBulkImport').disabled = true;
+  document.getElementById('bulkStatus').textContent = '';
+  bulkParsed = [];
+  toast(`Imported: ${bAdded} buildings, ${fAdded} floors, ${rAdded} rooms`, 'success');
+});
+
+// ═══════════════════════════════════════════════
+//  CODE GENERATOR
+// ═══════════════════════════════════════════════
+function generateCode() {
+  const lines = [];
+  lines.push('class Node {');
+  lines.push('\tconstructor(name, parent, type) {');
+  lines.push('\t\tthis.name = name;');
+  lines.push('\t\tthis.parent = parent;');
+  lines.push('\t\tthis.children = [];');
+  lines.push('\t\tthis.type = type; // "room" "floor" "building"');
+  lines.push('\t}');
+  lines.push('}');
+  lines.push('');
+  lines.push('class TreeDataStruct {');
+  lines.push('\tconstructor() {');
+  lines.push('\t\tthis.root = null;');
+  lines.push('\t\tthis.hashMap = new Map();');
+  lines.push('\t\tthis.buildTree();');
+  lines.push('\t}');
+  lines.push('');
+  lines.push('\tbuildTree() {');
+  lines.push('\t\tthis.root = new Node(\'root\', null, null);');
+  lines.push('');
+
+  for (const bld of state.buildings) {
+    const varName = sanitizeVar(bld.name);
+    lines.push(`\t\t// ── ${bld.name} ──`);
+    lines.push(`\t\tconst ${varName} = new Node('${bld.name}', this.root, 'building');`);
+    lines.push(`\t\tthis.root.children.push(${varName});`);
+    lines.push(`\t\tthis.hashMap.set(${varName}.name.toUpperCase(), ${varName});`);
+    lines.push('');
+
+    for (const floor of bld.floors) {
+      const floorVar = sanitizeVar(floor.name);
+      lines.push(`\t\tconst ${floorVar} = new Node('${floor.name}', ${varName}, 'floor');`);
+      lines.push(`\t\t${varName}.children.push(${floorVar});`);
+      lines.push(`\t\tthis.hashMap.set(${floorVar}.name.toUpperCase(), ${floorVar});`);
+
+      if (floor.rooms.length > 0) {
+        lines.push('');
+        lines.push(`\t\tconst ${floorVar}_ROOMS = [`);
+        floor.rooms.forEach(r => {
+          lines.push(`\t\t\t['${r}'],`);
+        });
+        lines.push('\t\t];');
+        lines.push('');
+        lines.push(`\t\t${floorVar}_ROOMS.forEach(([roomName]) => {`);
+        lines.push(`\t\t\tconst roomNode = new Node(roomName, ${floorVar}, 'room');`);
+        lines.push(`\t\t\t${floorVar}.children.push(roomNode);`);
+        lines.push(`\t\t\tthis.hashMap.set(roomName.toUpperCase(), roomNode);`);
+        lines.push('\t\t});');
+      }
+      lines.push('');
+    }
+  }
+
+  lines.push('\t}');
+  lines.push('');
+  lines.push('\tgetHashMap() {');
+  lines.push('\t\treturn this.hashMap;');
+  lines.push('\t}');
+  lines.push('}');
+  lines.push('');
+  lines.push('export {TreeDataStruct};');
+
+  return lines.join('\n');
+}
+
+function sanitizeVar(name) {
+  // Convert building/floor names to valid JS variable names
+  return name
+    .replace(/[^a-zA-Z0-9 ]/g, '')
+    .trim()
+    .split(/\s+/)
+    .map((w,i) => i===0 ? w.toUpperCase().slice(0,4) : w[0].toUpperCase() + w.slice(1))
+    .join('')
+    .replace(/^[0-9]/, '_$&');
+}
+
+document.getElementById('btnGenerate').addEventListener('click', () => {
+  if (state.buildings.length === 0) { toast('Add some buildings first', 'error'); return; }
+  const code = generateCode();
+  document.getElementById('codeOutput').textContent = code;
+  document.getElementById('btnDownload2').disabled = false;
+  toast('Code generated successfully', 'success');
+});
+
+function downloadFile(filename, content) {
+  const blob = new Blob([content], { type: 'text/javascript' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function triggerDownload() {
+  if (state.buildings.length === 0) { toast('Nothing to download', 'error'); return; }
+  const code = generateCode();
+  downloadFile('treeDataStruct.js', code);
+  toast('treeDataStruct.js downloaded!', 'success');
+}
+
+document.getElementById('btnDownload').addEventListener('click', triggerDownload);
+document.getElementById('btnDownload2').addEventListener('click', triggerDownload);
+
+document.getElementById('btnCopyCode').addEventListener('click', () => {
+  const text = document.getElementById('codeOutput').textContent;
+  navigator.clipboard.writeText(text).then(() => toast('Code copied to clipboard', 'success'));
+});
+
+// ═══════════════════════════════════════════════
+//  CHANGE LOG
+// ═══════════════════════════════════════════════
+function renderChangeLog() {
+  const el = document.getElementById('changeLog');
+  if (state.changes.length === 0) {
+    el.innerHTML = '<p class="empty-hint">No changes yet.</p>';
+    return;
+  }
+  el.innerHTML = [...state.changes].reverse().map(c => `
+    <div class="change-item ${c.type}">
+      <span>${c.type === 'added' ? '✅' : '🗑'}</span>
+      <span style="flex:1">${esc(c.msg)}</span>
+      <span style="color:var(--muted);font-size:0.72rem;font-family:'JetBrains Mono',monospace">${c.ts}</span>
+    </div>`).join('');
+}
+
+document.getElementById('btnClearLog').addEventListener('click', () => {
+  state.changes = [];
+  renderChangeLog();
+  toast('Change log cleared', 'info');
+});
+
+// ═══════════════════════════════════════════════
+//  CLEAR ALL
+// ═══════════════════════════════════════════════
+document.getElementById('btnClearAll').addEventListener('click', () => {
+  if (!confirm('Clear everything? This cannot be undone.')) return;
+  state.buildings = [];
+  state.changes = [];
+  state.originalCode = '';
+  renderTree();
+  document.getElementById('codeOutput').textContent = '// Click "Generate Code" to see the output…';
+  document.getElementById('btnDownload2').disabled = true;
+  toast('Cleared all data', 'info');
+});
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+renderTree();
+renderChangeLog();
+</script>
+</body>
+</html>

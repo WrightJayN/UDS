@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UTech Directions System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/x-icon" href="./assets/UTECH_ICON.png">
+</head>
+<body>
+    <header>
+        <div id="header-div">
+            <img id="utech-logo" src="./assets/UTECH_LOGO.webp" alt="University of Technology, Jamaica Logo" width="395" height="109">
+            <div>
+                <h1>UTech Papine Campus Directions</h1>        
+            </div>
+        </div>
+    </header>
+
+    <section class="hero" >
+        <img src="./assets/UTECH_ENTRANCE.webp" alt="Papine Campus Entrance" id="hero-img">
+        <div class="overlay">
+        </div>
+        <div class="text">
+            <h1>Find your way around</h1>
+            <h1>Papine Campus</h1>
+        </div>
+    </section>
+
+    <main>
+        <section id="directions-view" class="view active">
+            <h1>Directions</h1>
+            <form id="directions-form" autocomplete="off">
+                <div class="source-section">
+                    <label for="source-input">Source Room/Floor/Building: <small>(Leave empty for First Gate)</small></label>
+                    <input type="text" id="source-input" placeholder="e.g., First Gate (default)" >
+                    <div id="source-suggestions" class="suggestions"></div>
+                </div>
+
+                <div class="destination-section">
+                    <label for="destination-input">Destination Room/Floor/Building: <span class="required">*</span></label>
+                    <input type="text" id="destination-input" placeholder="e.g., 1A37, 2B5, 8A3" required>
+                    <div id="destination-suggestions" class="suggestions"></div>
+                </div>
+                
+                <div id="submit-div"> 
+                    <button type="submit" id="submitBtn">Get Directions</button>
+                </div>
+            </form>
+            <div id="canvasContainer"></div>
+    
+            <div id="output" class="output-container" style="display: none;">
+            </div>
+            
+            <div id="error" class="error-container" style="display: none;">
+                <p id="errorMessage"></p>
+            </div>          
+        </section>
+    </main>
+    <footer>
+        <div id="bible-verse">
+            Thy word is a lamp unto my feet, and a light unto my path (Psalm 119:105)
+        </div>
+        <p>Credits: JNW </p>
+        <p>A UTech Student Innovation Project</p>
+        <p>Version: <span id="version"></span></p>
+        <p><a href="https://www.utech.edu.jm/">Visit UTech Official Page</a></p>
+    </footer>
+
+    <!-- Import app functionality -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
